@@ -14,7 +14,7 @@ Requires Blender 4.2+ (tested with 5.2).
 ## Installation
 
 1. Build the zip with Blender's own Python:
-   `"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/paketle.py`
+   `"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/package.py`
    → creates `dist/print3d_studio-1.0.0.zip`.
 2. Blender → *Edit > Preferences > Get Extensions* → ▾ in the top right → **Install from Disk…** → pick the zip.
 3. In the 3D Viewport press **N** → **3D Print** tab.

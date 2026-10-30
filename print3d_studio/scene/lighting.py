@@ -1,4 +1,4 @@
-"""Isik hazir ayarlari: stüdyo, gun isigi, altin saat, aksam, HDRI."""
+"""Lighting presets: studio, daylight, golden hour, evening, HDRI."""
 import math
 import os
 
@@ -91,7 +91,7 @@ def _hdri_world(scene, path, strength, rot):
 
 
 def _sun_direction(elev, azim):
-    """Gunes isinlarinin ilerleme yonu (gokyuzunden sahneye)."""
+    """Direction the sun rays travel (from the sky into the scene)."""
     win = room.find_window()
     if win is not None:
         _, n_out, _ = win
@@ -129,7 +129,7 @@ def setup(context, s):
 
     if preset == 'STUDIO':
         _flat_world(scene, (0.55, 0.56, 0.58), 0.12 * k)
-        # alan isigi isinimi ~ P / (pi * d^2): gunes (~4.5 W/m2) ile ayni pozlamada kalsin
+        # area light irradiance ~ P / (pi * d^2): keep the same exposure as the sun (~4.5 W/m2)
         d = max(0.4, r * 7)
         pw = d * d
         _light(coll, "Key_Softbox", 'AREA', 11 * pw * k, target + Vector((-0.8, -0.9, 0.9)).normalized() * d,

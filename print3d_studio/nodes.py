@@ -1,4 +1,4 @@
-"""Shader dugum agaclarini kisa kodla kurmak icin yardimci sinif."""
+"""Helper class for building shader node trees with short code."""
 import bpy
 
 PRINCIPLED = {
@@ -25,7 +25,7 @@ class NB:
         self._i = 0
         self._tc = None
 
-    # --- temel ---------------------------------------------------------
+    # --- basics --------------------------------------------------------
     def new(self, typ, **props):
         n = self.nodes.new(typ)
         n.location = ((self._i % 12) * 220.0, -(self._i // 12) * 320.0)
@@ -65,7 +65,7 @@ class NB:
     def obj(self):
         return self.tc.outputs['Object']
 
-    # --- matematik -----------------------------------------------------
+    # --- math ----------------------------------------------------------
     def math(self, op, a, b=0.0, c=0.0, clamp=False):
         n = self.new('ShaderNodeMath', operation=op, use_clamp=clamp)
         self.set(n.inputs[0], a)
@@ -160,7 +160,7 @@ class NB:
         self.set(n.inputs[0], fac)
         return n.outputs['Color']
 
-    # --- dokular -------------------------------------------------------
+    # --- textures ------------------------------------------------------
     def noise(self, vec, scale, detail=2.0, rough=0.5, distortion=0.0):
         n = self.new('ShaderNodeTexNoise')
         self.inp(n, "Vector", vec)
@@ -205,7 +205,7 @@ class NB:
             self.inp(n, "Normal", normal)
         return n.outputs['Normal']
 
-    # --- cikis ---------------------------------------------------------
+    # --- output --------------------------------------------------------
     def principled(self, **kw):
         n = self.new('ShaderNodeBsdfPrincipled')
         for k, v in kw.items():

@@ -1,4 +1,4 @@
-"""Esya ve oda geometrisini tek bir bmesh icinde, malzeme indeksleriyle kurar."""
+"""Builds prop and room geometry in a single bmesh, with material indices."""
 import math
 
 import bmesh
@@ -50,7 +50,7 @@ class MB:
         self._tag(ret['verts'], mat=mat, smooth=True)
 
     def lathe(self, prof, loc, mat, segs=64, closed=False, rot=(0, 0, 0)):
-        """(r, z) profilini Z ekseni etrafinda dondurerek yuzey olusturur."""
+        """Creates a surface by revolving an (r, z) profile around the Z axis."""
         bm = self.bm
         m = mat4(loc, rot)
         rings = []

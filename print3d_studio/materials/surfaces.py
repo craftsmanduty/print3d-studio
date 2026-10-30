@@ -1,8 +1,8 @@
-"""Gunluk malzemeler icin prosedurel (doku dosyasi gerektirmeyen) kurucular.
+"""Material builders for everyday surfaces (procedural, plus scanned photo textures).
 
-Olcekler gercek dunya metresine goredir; nesneler gercek boyutlu olmalidir.
-Yeni bir kurucu eklemek icin @builder("ad") ile fonksiyon yazip
-data/materials.json icinde "builder": "ad" olarak kullanmak yeterlidir.
+Scales are in real-world meters, so objects must be at real size.
+To add a builder, write a function decorated with @builder("name") and use
+"builder": "name" in data/materials.json.
 """
 import math
 
@@ -30,7 +30,7 @@ class P(dict):
 
 
 def get(mat_id):
-    """Paletteki malzemeyi (gerekirse kurarak) dondurur."""
+    """Returns the palette material, building it if needed."""
     spec = palette.material_spec(mat_id)
     if spec is None:
         spec = {"id": mat_id, "name": mat_id, "builder": "plastic", "params": {}}

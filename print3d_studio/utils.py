@@ -13,7 +13,7 @@ def linear_to_srgb(c):
 
 
 def hex_to_linear(h):
-    """'#RRGGBB' -> lineer RGB tuple. Zaten tuple ise aynen dondurur."""
+    """'#RRGGBB' -> linear RGB tuple. Tuples are returned unchanged."""
     if isinstance(h, (tuple, list)):
         return tuple(h[:3])
     h = h.lstrip("#")
@@ -25,7 +25,7 @@ def linear_to_hex(c):
 
 
 def kelvin_to_linear(k):
-    """Renk sicakligi (K) -> yaklasik lineer RGB (en parlak kanal 1.0)."""
+    """Colour temperature (K) -> approximate linear RGB (brightest channel 1.0)."""
     t = k / 100.0
     if t <= 66:
         r = 255.0
@@ -56,7 +56,7 @@ def clear_collection(coll):
 
 
 def node_material(name, existing=None):
-    """Bos (temizlenmis) bir dugum agaci olan malzeme dondurur."""
+    """Returns a material with an empty (cleared) node tree."""
     mat = existing or bpy.data.materials.get(name) or bpy.data.materials.new(name)
     if mat.node_tree is None:
         try:
@@ -82,7 +82,7 @@ def world_tree(scene):
 
 
 def world_bounds(obj):
-    """Nesnenin dunya uzayindaki (min, max, merkez, yaricap) degerleri."""
+    """The object's world-space (min, max, center, radius)."""
     from mathutils import Vector
     pts = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
     mn = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))

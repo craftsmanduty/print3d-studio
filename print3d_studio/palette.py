@@ -1,8 +1,8 @@
-"""Filament ve malzeme paletlerini JSON dosyalarindan yukler.
+"""Loads the filament and material palettes from JSON files.
 
-Yerlesik palet `data/` klasorundedir; kullanicinin ekledikleri ayri bir
-kullanici klasorundeki `user_filaments.json` / `user_materials.json`
-dosyalarina yazilir, boylece eklenti guncellense de kaybolmaz.
+The built-in palette lives in `data/`; user additions are written to
+`user_filaments.json` / `user_materials.json` in a separate user folder,
+so they survive add-on updates.
 """
 import json
 import os
@@ -13,7 +13,7 @@ _DIR = os.path.dirname(os.path.abspath(__file__))
 
 DATA = {"types": {}, "materials": {}, "mat_order": [], "categories": []}
 
-# EnumProperty geri cagirmalarinin dondurdugu listeler canli tutulmali.
+# Lists returned by EnumProperty callbacks must be kept alive.
 _ENUM = {"types": [], "colors": {}, "cats": [], "mats_by_cat": {}, "all_mats": [], "mat_index": {}}
 _EMPTY = [("NONE", "-", "", 0)]
 
@@ -94,7 +94,7 @@ def _rebuild_enums():
     ]
 
 
-# --- sorgular --------------------------------------------------------------
+# --- queries ---------------------------------------------------------------
 def get_type(key):
     return DATA["types"].get(key) or next(iter(DATA["types"].values()))
 
@@ -121,7 +121,7 @@ def mat_number(mid):
     return _ENUM["mat_index"].get(mid, 0)
 
 
-# --- enum geri cagirmalari ------------------------------------------------
+# --- enum callbacks -------------------------------------------------------
 def enum_types(self, context):
     return _ENUM["types"] or _EMPTY
 
@@ -146,7 +146,7 @@ def enum_all_mats(self, context):
     return _ENUM["all_mats"] or _EMPTY
 
 
-# --- kullanici eklemeleri -------------------------------------------------
+# --- user additions -------------------------------------------------------
 def add_user_color(type_key, name, hexcode):
     path = os.path.join(user_dir(), "user_filaments.json")
     data = _read(path)

@@ -1,8 +1,8 @@
-"""Hazir esya paleti. Olculer metre cinsindendir.
+"""Ready-made props. Dimensions are in meters.
 
-Yeni esya eklemek: `@item("kimlik", "Gorunen Ad", "IKON")` ile bir fonksiyon
-yazin; fonksiyon (koleksiyon, kok_bos_nesne, rng) alir ve nesneleri kok'e
-baglar. Daha kolay yol: Blender'da modelleyip panelden "Kutuphaneye Kaydet".
+To add a prop, write a function decorated with `@item("id", "Display Name", "ICON")`;
+it receives (collection, root_empty, rng) and parents its objects to the root.
+Easier: model it in Blender and use Props > My Asset Library > Save.
 """
 import math
 import random
@@ -16,7 +16,7 @@ from .. import palette
 from .mesh import MB, mat4
 
 COLLECTION = "P3D_Props"
-ITEMS = []          # (id, ad, ikon, fonksiyon)
+ITEMS = []          # (id, label, icon, function)
 DESK_TOP = 0.75
 
 BOOK_COLORS = ['#7A2E2E', '#2E4A7A', '#2F5D50', '#C9B27C', '#3B3B3B', '#8C5A3C',
@@ -50,7 +50,7 @@ def book(mb, t, d, h, pre, cover, pages=None):
 
 
 def add(iid, context, location=None, rotation_z=0.0, seed=None):
-    """Esyayi imlecte (veya verilen konumda) olusturur, kok bos nesneyi dondurur."""
+    """Creates the prop at the 3D cursor (or the given location) and returns its root empty."""
     spec = next((i for i in ITEMS if i[0] == iid), None)
     if spec is None:
         return None

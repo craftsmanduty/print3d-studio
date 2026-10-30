@@ -1,4 +1,4 @@
-"""Oda (duvar, zemin, tavan, pencere) ve stüdyo fonu kurucu."""
+"""Builds the room (walls, floor, ceiling, window) and the studio backdrop."""
 import math
 
 import bpy
@@ -69,7 +69,7 @@ def build_room(context, s):
         along, fixed, u0, u1, nrm = walls[win]
         _window(coll, along, fixed, ww, wh, sill, T, nrm, s)
 
-    # pencereden gorunen dis zemin
+    # outdoor ground seen through the window
     mb = MB()
     mb.box((80, 80, 0.02), (0, 0, -0.08), surfaces.get('concrete'))
     outside = mb.to_object("Outside_Ground", coll, bevel=0.0)
@@ -93,7 +93,7 @@ def _window(coll, along, fixed, ww, wh, sill, T, nrm, s):
     bx(-ww / 2 + fw / 2, zc, fw, wh, fd, fm)
     bx(ww / 2 - fw / 2, zc, fw, wh, fd, fm)
     bx(0, zc, fw * 0.8, wh, fd, fm)
-    # ic denizlik
+    # inner window sill
     inward = -1.0 * (nrm.x if along == 'Y' else nrm.y)
     bx(0, sill - 0.012, ww + 0.1, 0.025, T + 0.06, surfaces.get('marble_white'), dn=inward * 0.03)
     mb.to_object("Window_Frame", coll, bevel=0.002)
@@ -116,7 +116,7 @@ def find_window():
 
 
 def build_cove(context, s):
-    """Kivrimli sonsuz fon (urun fotografi icin)."""
+    """Curved seamless backdrop (for product shots)."""
     coll = utils.ensure_collection(COLLECTION)
     utils.clear_collection(coll)
     W, D, H, R = s.cove_w, s.cove_d, s.cove_h, s.cove_r

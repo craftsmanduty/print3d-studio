@@ -1,7 +1,7 @@
-"""Eklentiyi Blender'a kurmadan test eder ve kucuk bir render alir.
+"""Tests the add-on without installing it and renders a small image.
 
-Kullanim:
-  blender -b --factory-startup --python tools/test_render.py -- [cikti.png] [preset] [samples]
+Usage:
+  blender -b --factory-startup --python tools/test_render.py -- [out.png] [preset] [samples]
 """
 import os
 import sys
@@ -21,11 +21,11 @@ ftype = argv[3] if len(argv) > 3 else "PLA_SILK"
 import print3d_studio  # noqa: E402
 print3d_studio.register()
 
-# temiz sahne
+# clean scene
 for o in list(bpy.data.objects):
     bpy.data.objects.remove(o, do_unlink=True)
 
-# STL gibi mm biriminde gelen test modeli (80 birim = 80 mm)
+# test model in millimeters like an STL (80 units = 80 mm)
 bpy.ops.mesh.primitive_monkey_add(size=60, location=(0, 0, 0))
 mk = bpy.context.active_object
 mk.rotation_euler = (math.radians(0), 0, 0)
@@ -44,7 +44,7 @@ mk.p3d.layer_height = 0.2
 
 bpy.ops.p3d.quick_scene()
 
-# tum esyalari da olustur (hata kontrolu)
+# also create every prop (error check)
 if "--all" in sys.argv:
     for iid, *_ in print3d_studio.scene.furniture.ITEMS:
         print3d_studio.scene.furniture.add(iid, bpy.context, location=(5, 5, 0))

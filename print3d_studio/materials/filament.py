@@ -1,7 +1,7 @@
-"""FDM baski gorunumu: katman cizgileri, dikis izi, ust yuzey dolgu cizgileri.
+"""FDM print look: layer lines, seam, top-surface skin lines.
 
-Katmanlar nesnenin yerel koordinatinda, secilen basim yonune gore hesaplanir;
-boylece nesne sahnede dondurulse de cizgiler modelin uzerinde sabit kalir.
+Layers are computed in the object's local space along the chosen print direction,
+so the lines stay fixed on the model even when the object is rotated in the scene.
 """
 import math
 
@@ -58,7 +58,7 @@ def make_cfg(obj, scene, d, layer_mm, width_mm, strength=1.0, variation=0.35,
 
 
 def _bead(nb, t):
-    """0..1 arasi katman icinde yuvarlak ekstruzyon profili (kenarlarda V oluk)."""
+    """Rounded extrusion profile across one layer, 0..1 (V grooves at the edges)."""
     x = nb.math('MULTIPLY_ADD', t, 2.0, -1.0)
     y = nb.sub(1.0, nb.mul(x, x))
     return nb.math('POWER', nb.math('MAXIMUM', y, 0.0), 0.5)
@@ -77,18 +77,18 @@ def build(mat, tdef, colors, cfg, extra_glow=None):
     var = cfg['variation']
     dvec = nb.vec(*d)
 
-    # --- katman yuksekligi ---------------------------------------------
+    # --- layer height ---------------------------------------------------
     h = nb.sub(nb.dot(co, dvec), cfg['hmin'])
     hl = nb.math('DIVIDE', h, L)
     n = nb.math('FLOOR', hl)
     prof = _bead(nb, nb.math('FRACT', hl))
 
-    # katmandan katmana kucuk farklar (z-banding) ve yatay dalgalanma
+    # small layer-to-layer differences (z-banding) and horizontal wobble
     zband = nb.mul(nb.sub(nb.white1d(n), 0.5), 0.5 * var)
     wob = nb.mul(nb.sub(nb.noise(co, 1.0 / (6.0 * mmL), detail=3.0).outputs['Fac'], 0.5), 0.6 * var)
     layer_h = nb.add(nb.add(prof, zband), wob)
 
-    # --- aci (dikis ve cok renkli silk icin) ----------------------------
+    # --- angle (for the seam and multi-colour silk) ----------------------
     pc = nb.vsub(co, nb.vec(*cfg['center']))
     au, av = nb.dot(pc, nb.vec(*u)), nb.dot(pc, nb.vec(*v))
     ang = nb.math('ARCTAN2', av, au)
@@ -182,7 +182,7 @@ def build(mat, tdef, colors, cfg, extra_glow=None):
     final_h = nb.mix_float(tmask, wall_h, terr_h)
     shade = nb.mix_float(tmask, layer_h, terr_shade)
 
-    # --- renk ------------------------------------------------------------
+    # --- colour ----------------------------------------------------------
     effect = tdef.get('effect', 'none')
     if len(colors) > 1 and effect == 'rainbow':
         period = cfg['period_mm'] * mmL
@@ -198,11 +198,11 @@ def build(mat, tdef, colors, cfg, extra_glow=None):
     else:
         base = nb.vec(*colors[0])
 
-    # parti/uretim kaynakli cok hafif ton farki
+    # very slight tone variation between batches / along the spool
     tone = nb.maprange(nb.noise(co, 1.0 / (30.0 * mmL)).outputs['Fac'], 0.3, 0.7, 0.975, 1.025)
     base = nb.vscale(base, tone)
-    # katman oluklarinda hafif koyulasma
-    # (albedo'da da bulunmasi denoiser'in cizgileri silmesini engeller)
+    # slight darkening in the layer grooves
+    # (having it in the albedo too keeps the denoiser from wiping the lines out)
     base = nb.vscale(base, nb.maprange(shade, 0.0, 1.0, 1.0 - 0.3 * min(strength, 1.8), 1.0))
 
     rough = nb.add(tdef.get("roughness", 0.4), nb.mul(nb.sub(1.0, shade), 0.08))
@@ -348,7 +348,7 @@ def _update_layers(obj, scene, d, p):
 
 
 def apply(obj, scene=None):
-    """Nesnenin p3d ayarlarina gore filament malzemesini kurar ve atar."""
+    """Builds the filament material from the object's p3d settings and assigns it."""
     import bpy
     if obj is None or obj.type != 'MESH':
         return None

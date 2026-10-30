@@ -1,5 +1,5 @@
-Bu klasore .blend dosyalari koyabilirsiniz. Dosyadaki her koleksiyon
-"Esya Paleti > Kendi Esya Kutuphanem" listesinde ayri bir esya olarak gorunur.
+Put .blend files in this folder. Every collection in a file shows up as a
+separate prop in the "Props > My Asset Library" list.
 
-Panelden "Kaydet" ile kaydettiginiz esyalar ise eklentinin kullanici
-klasorune (Paleti Genislet > Klasor) yazilir; eklenti guncellense de silinmez.
+Props saved from the panel with "Save" are written to the add-on's user
+folder (Extend Palette > Folder) instead, so they survive add-on updates.

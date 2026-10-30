@@ -1,6 +1,6 @@
 import bpy
 
-QUALITY = {  # ornek sayisi, adaptif esik, cozunurluk yuzdesi
+QUALITY = {  # samples, adaptive threshold, resolution percentage
     'PREVIEW': (96, 0.05, 50),
     'FINAL': (512, 0.01, 100),
     'ULTRA': (2048, 0.004, 100),

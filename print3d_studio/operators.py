@@ -16,7 +16,7 @@ def _meshes(context):
 
 
 # ---------------------------------------------------------------------------
-# Baski
+# Print
 # ---------------------------------------------------------------------------
 class P3D_OT_apply_filament(bpy.types.Operator):
     """Apply the 3D-print look to selected objects (using the active object's settings)"""
@@ -79,7 +79,7 @@ class P3D_OT_scale_real(bpy.types.Operator):
 
 
 def drop_to_surface(context, obj):
-    """Nesneyi altindaki yuzeye (masa, zemin...) oturtur."""
+    """Sets the object down on the surface below it (desk, floor...)."""
     context.view_layer.update()
     dg = context.evaluated_depsgraph_get()
     mn, mx, c, _ = utils.world_bounds(obj)
@@ -114,7 +114,7 @@ class P3D_OT_drop(bpy.types.Operator):
 
 
 # ---------------------------------------------------------------------------
-# Malzemeler
+# Materials
 # ---------------------------------------------------------------------------
 class P3D_OT_apply_surface(bpy.types.Operator):
     """Apply the chosen library material (with its surface relief) to selected objects"""
@@ -193,7 +193,7 @@ class P3D_OT_open_user_dir(bpy.types.Operator):
 
 
 # ---------------------------------------------------------------------------
-# Oda & esyalar
+# Room & props
 # ---------------------------------------------------------------------------
 class P3D_OT_build_room(bpy.types.Operator):
     """(Re)build the room from the settings"""
@@ -349,7 +349,7 @@ class P3D_OT_asset_save(bpy.types.Operator):
 
 
 # ---------------------------------------------------------------------------
-# Isik / kamera / render
+# Lighting / camera / render
 # ---------------------------------------------------------------------------
 class P3D_OT_lighting(bpy.types.Operator):
     """Set up the selected lighting preset"""

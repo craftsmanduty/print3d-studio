@@ -1,6 +1,7 @@
-"""Eklentiyi Blender'a kurulabilir .zip olarak paketler -> dist/ klasoru.
+"""Packages the add-on as an installable Blender extension .zip -> dist/.
 
-Kullanim:  python tools/paketle.py
+Usage (Blender's own Python works too):
+  blender -b --factory-startup --python tools/package.py
 """
 import os
 import re
@@ -23,4 +24,4 @@ with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
                 continue
             full = os.path.join(base, fn)
             z.write(full, os.path.relpath(full, SRC))
-print("Olusturuldu:", out)
+print("Created:", out)
