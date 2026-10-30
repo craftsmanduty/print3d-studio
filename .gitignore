@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+
+# user palette, asset library and downloaded Poly Haven textures (created at run time)
+print3d_studio/user_data/
+
+# build output (attach the zip to a GitHub release instead)
+dist/
+
+# test renders and Blender scene files written by the tools (curated images live in docs/)
+renders/
+*.blend
+*.blend1

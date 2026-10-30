@@ -1,0 +1,710 @@
+{
+  "_note": "Material library. 'builder' is the procedural builder type (wood, parquet, metal, paint, plastic, concrete, marble, brick, fabric, leather, carpet, glass, ceramic, paper, cork, leaf, cutting_mat, pei, emission, canvas_art). Colors are sRGB hex.",
+  "materials": [
+    {
+      "id": "oak_photo",
+      "name": "Oak Veneer (Photo, Oiled)",
+      "category": "Wood",
+      "builder": "photo",
+      "params": {
+        "tex": "oak_veneer_01",
+        "size": 1.83,
+        "rot": 90.0,
+        "tint": "#E9D3B2",
+        "rough_min": 0.38,
+        "rough_max": 0.72,
+        "coat": 0.15,
+        "coat_rough": 0.3,
+        "light": "#CFA46A",
+        "dark": "#A0703A"
+      },
+      "source": "Poly Haven (CC0) - oak_veneer_01"
+    },
+    {
+      "id": "dark_table_photo",
+      "name": "Dark Wood Table (Photo)",
+      "category": "Wood",
+      "builder": "photo",
+      "params": {
+        "tex": "wood_table_001",
+        "size": 1.5,
+        "rot": 90.0,
+        "rough_min": 0.3,
+        "rough_max": 0.6,
+        "coat": 0.25,
+        "coat_rough": 0.2,
+        "light": "#7A4A2A",
+        "dark": "#3E2312"
+      },
+      "source": "Poly Haven (CC0) - wood_table_001"
+    },
+    {
+      "id": "fine_wood_photo",
+      "name": "Fine Grained Wood (Photo)",
+      "category": "Wood",
+      "builder": "photo",
+      "params": {
+        "tex": "fine_grained_wood",
+        "size": 0.6,
+        "rot": 90.0,
+        "rough_min": 0.45,
+        "rough_max": 0.8,
+        "light": "#C9A27A",
+        "dark": "#8E6A48"
+      },
+      "source": "Poly Haven (CC0) - fine_grained_wood"
+    },
+    {
+      "id": "rosewood_photo",
+      "name": "Rosewood Veneer (Photo)",
+      "category": "Wood",
+      "builder": "photo",
+      "params": {
+        "tex": "rosewood_veneer1",
+        "size": 2.43,
+        "rot": 90.0,
+        "rough_min": 0.3,
+        "rough_max": 0.6,
+        "coat": 0.3,
+        "coat_rough": 0.15,
+        "light": "#8A4B2E",
+        "dark": "#4A2214"
+      },
+      "source": "Poly Haven (CC0) - rosewood_veneer1"
+    },
+    {
+      "id": "plywood_photo",
+      "name": "Plywood (Photo)",
+      "category": "Wood",
+      "builder": "photo",
+      "params": {
+        "tex": "plywood",
+        "size": 0.5,
+        "rot": 90.0,
+        "rough_min": 0.5,
+        "rough_max": 0.85,
+        "light": "#D8BC8E",
+        "dark": "#B2915F"
+      },
+      "source": "Poly Haven (CC0) - plywood"
+    },
+    {
+      "id": "laminate_photo",
+      "name": "Laminate Floor (Photo)",
+      "category": "Walls & Floors",
+      "builder": "photo",
+      "params": {
+        "tex": "laminate_floor_02",
+        "size": 1.7,
+        "rot": 90.0,
+        "rough_min": 0.3,
+        "rough_max": 0.6,
+        "coat": 0.2,
+        "coat_rough": 0.2,
+        "fallback": "parquet",
+        "light": "#B98A5A",
+        "dark": "#8A5E36"
+      },
+      "source": "Poly Haven (CC0) - laminate_floor_02"
+    },
+    {
+      "id": "oak_varnished",
+      "name": "Oak (Oiled, Satin)",
+      "category": "Wood",
+      "builder": "wood",
+      "params": {
+        "light": "#CFA46A",
+        "dark": "#A0703A",
+        "rough": 0.5,
+        "coat": 0.12,
+        "coat_rough": 0.3
+      }
+    },
+    {
+      "id": "oak_raw",
+      "name": "Oak (Raw)",
+      "category": "Wood",
+      "builder": "wood",
+      "params": {
+        "light": "#D3B07E",
+        "dark": "#A88252",
+        "rough": 0.72,
+        "pores": 1.2
+      }
+    },
+    {
+      "id": "walnut",
+      "name": "Walnut",
+      "category": "Wood",
+      "builder": "wood",
+      "params": {
+        "light": "#7A5235",
+        "dark": "#40291A",
+        "rough": 0.48,
+        "coat": 0.15,
+        "coat_rough": 0.3
+      }
+    },
+    {
+      "id": "pine",
+      "name": "Pine",
+      "category": "Wood",
+      "builder": "wood",
+      "params": {
+        "light": "#E6C793",
+        "dark": "#C08A48",
+        "rough": 0.6,
+        "rings": 120,
+        "pores": 0.2,
+        "stave_w": 0.09
+      }
+    },
+    {
+      "id": "birch_ply",
+      "name": "Birch Plywood",
+      "category": "Wood",
+      "builder": "wood",
+      "params": {
+        "light": "#EAD6B2",
+        "dark": "#D2B58A",
+        "rough": 0.65,
+        "rings": 300,
+        "pores": 0.3,
+        "stave_w": 0.0
+      }
+    },
+    {
+      "id": "teak",
+      "name": "Teak",
+      "category": "Wood",
+      "builder": "wood",
+      "params": {
+        "light": "#A86F3A",
+        "dark": "#70461F",
+        "rough": 0.5,
+        "coat": 0.1
+      }
+    },
+    {
+      "id": "lacquer_white",
+      "name": "White Lacquer",
+      "category": "Wood",
+      "builder": "plastic",
+      "params": {
+        "base": "#EEEDEA",
+        "rough": 0.25,
+        "coat": 0.5
+      }
+    },
+    {
+      "id": "steel_brushed",
+      "name": "Brushed Stainless Steel",
+      "category": "Metal",
+      "builder": "metal",
+      "params": {
+        "base": "#C0C2C4",
+        "rough": 0.3,
+        "brushed": 1.0
+      }
+    },
+    {
+      "id": "metal_alu",
+      "name": "Aluminium (Matte)",
+      "category": "Metal",
+      "builder": "metal",
+      "params": {
+        "base": "#D0D3D6",
+        "rough": 0.42,
+        "brushed": 0.3
+      }
+    },
+    {
+      "id": "metal_black",
+      "name": "Black Powder-Coated Metal",
+      "category": "Metal",
+      "builder": "plastic",
+      "params": {
+        "base": "#1E1E1E",
+        "rough": 0.5,
+        "bump": 0.4
+      }
+    },
+    {
+      "id": "brass",
+      "name": "Brass",
+      "category": "Metal",
+      "builder": "metal",
+      "params": {
+        "base": "#D6B15E",
+        "rough": 0.25
+      }
+    },
+    {
+      "id": "copper",
+      "name": "Copper",
+      "category": "Metal",
+      "builder": "metal",
+      "params": {
+        "base": "#D48A5E",
+        "rough": 0.25
+      }
+    },
+    {
+      "id": "chrome",
+      "name": "Chrome",
+      "category": "Metal",
+      "builder": "metal",
+      "params": {
+        "base": "#E6E8EA",
+        "rough": 0.05
+      }
+    },
+    {
+      "id": "gold",
+      "name": "Gold",
+      "category": "Metal",
+      "builder": "metal",
+      "params": {
+        "base": "#F4C86A",
+        "rough": 0.15
+      }
+    },
+    {
+      "id": "concrete",
+      "name": "Concrete",
+      "category": "Stone & Concrete",
+      "builder": "concrete",
+      "params": {
+        "base": "#9A9893"
+      }
+    },
+    {
+      "id": "marble_white",
+      "name": "White Marble",
+      "category": "Stone & Concrete",
+      "builder": "marble",
+      "params": {
+        "base": "#EEEDE9",
+        "vein": "#8A8C90"
+      }
+    },
+    {
+      "id": "marble_black",
+      "name": "Black Marble",
+      "category": "Stone & Concrete",
+      "builder": "marble",
+      "params": {
+        "base": "#1C1C1E",
+        "vein": "#C9C9C9"
+      }
+    },
+    {
+      "id": "brick",
+      "name": "Brick",
+      "category": "Stone & Concrete",
+      "builder": "brick",
+      "params": {
+        "c1": "#8E4A32",
+        "c2": "#A85F44",
+        "mortar": "#CFC8BC"
+      }
+    },
+    {
+      "id": "fabric_linen",
+      "name": "Linen",
+      "category": "Fabric & Leather",
+      "builder": "fabric",
+      "params": {
+        "base": "#D8CDB8"
+      }
+    },
+    {
+      "id": "fabric_gray",
+      "name": "Gray Fabric",
+      "category": "Fabric & Leather",
+      "builder": "fabric",
+      "params": {
+        "base": "#7B7D80"
+      }
+    },
+    {
+      "id": "fabric_navy",
+      "name": "Navy Fabric",
+      "category": "Fabric & Leather",
+      "builder": "fabric",
+      "params": {
+        "base": "#2A3954"
+      }
+    },
+    {
+      "id": "leather_brown",
+      "name": "Brown Leather",
+      "category": "Fabric & Leather",
+      "builder": "leather",
+      "params": {
+        "base": "#5A3621"
+      }
+    },
+    {
+      "id": "leather_black",
+      "name": "Black Leather",
+      "category": "Fabric & Leather",
+      "builder": "leather",
+      "params": {
+        "base": "#1E1B1A"
+      }
+    },
+    {
+      "id": "carpet_beige",
+      "name": "Beige Carpet",
+      "category": "Fabric & Leather",
+      "builder": "carpet",
+      "params": {
+        "base": "#CBB89B"
+      }
+    },
+    {
+      "id": "carpet_gray",
+      "name": "Gray Carpet",
+      "category": "Fabric & Leather",
+      "builder": "carpet",
+      "params": {
+        "base": "#6E6E6E"
+      }
+    },
+    {
+      "id": "glass_clear",
+      "name": "Clear Glass",
+      "category": "Glass & Ceramic",
+      "builder": "glass",
+      "params": {
+        "base": "#FFFFFF",
+        "rough": 0.0
+      }
+    },
+    {
+      "id": "glass_frosted",
+      "name": "Frosted Glass",
+      "category": "Glass & Ceramic",
+      "builder": "glass",
+      "params": {
+        "base": "#FFFFFF",
+        "rough": 0.35
+      }
+    },
+    {
+      "id": "ceramic_white",
+      "name": "White Ceramic",
+      "category": "Glass & Ceramic",
+      "builder": "ceramic",
+      "params": {
+        "base": "#F1F0EC",
+        "rough": 0.1
+      }
+    },
+    {
+      "id": "ceramic_black",
+      "name": "Matte Black Ceramic",
+      "category": "Glass & Ceramic",
+      "builder": "ceramic",
+      "params": {
+        "base": "#202020",
+        "rough": 0.55,
+        "coat": 0.0
+      }
+    },
+    {
+      "id": "ceramic_sage",
+      "name": "Sage Ceramic",
+      "category": "Glass & Ceramic",
+      "builder": "ceramic",
+      "params": {
+        "base": "#9CAF95",
+        "rough": 0.3,
+        "coat": 0.6
+      }
+    },
+    {
+      "id": "terracotta",
+      "name": "Terracotta",
+      "category": "Glass & Ceramic",
+      "builder": "concrete",
+      "params": {
+        "base": "#B5653E",
+        "rough": 0.85,
+        "contrast": 0.5
+      }
+    },
+    {
+      "id": "paint_white",
+      "name": "White Wall Paint",
+      "category": "Walls & Floors",
+      "builder": "paint",
+      "params": {
+        "base": "#EDEBE6"
+      }
+    },
+    {
+      "id": "paint_warm",
+      "name": "Off-White Wall Paint",
+      "category": "Walls & Floors",
+      "builder": "paint",
+      "params": {
+        "base": "#E6DED0"
+      }
+    },
+    {
+      "id": "paint_gray",
+      "name": "Gray Wall Paint",
+      "category": "Walls & Floors",
+      "builder": "paint",
+      "params": {
+        "base": "#A7A9A8"
+      }
+    },
+    {
+      "id": "paint_sage",
+      "name": "Sage Green Wall Paint",
+      "category": "Walls & Floors",
+      "builder": "paint",
+      "params": {
+        "base": "#9CAF95"
+      }
+    },
+    {
+      "id": "paint_navy",
+      "name": "Midnight Blue Wall Paint",
+      "category": "Walls & Floors",
+      "builder": "paint",
+      "params": {
+        "base": "#2F3E55"
+      }
+    },
+    {
+      "id": "paint_terracotta",
+      "name": "Terracotta Wall Paint",
+      "category": "Walls & Floors",
+      "builder": "paint",
+      "params": {
+        "base": "#B86B4B"
+      }
+    },
+    {
+      "id": "parquet_oak",
+      "name": "Oak Parquet",
+      "category": "Walls & Floors",
+      "builder": "parquet",
+      "params": {
+        "light": "#C9A26E",
+        "dark": "#9B7140",
+        "rough": 0.45,
+        "coat": 0.25,
+        "coat_rough": 0.2
+      }
+    },
+    {
+      "id": "parquet_walnut",
+      "name": "Walnut Parquet",
+      "category": "Walls & Floors",
+      "builder": "parquet",
+      "params": {
+        "light": "#7A5235",
+        "dark": "#432A18",
+        "rough": 0.45,
+        "coat": 0.25,
+        "coat_rough": 0.2
+      }
+    },
+    {
+      "id": "concrete_floor",
+      "name": "Concrete Floor",
+      "category": "Walls & Floors",
+      "builder": "concrete",
+      "params": {
+        "base": "#8C8A86",
+        "rough": 0.6
+      }
+    },
+    {
+      "id": "plastic_white",
+      "name": "White Plastic",
+      "category": "Other",
+      "builder": "plastic",
+      "params": {
+        "base": "#EFEFEC",
+        "rough": 0.35
+      }
+    },
+    {
+      "id": "plastic_black",
+      "name": "Black Plastic",
+      "category": "Other",
+      "builder": "plastic",
+      "params": {
+        "base": "#141414",
+        "rough": 0.4
+      }
+    },
+    {
+      "id": "rubber",
+      "name": "Rubber",
+      "category": "Other",
+      "builder": "plastic",
+      "params": {
+        "base": "#1A1A1A",
+        "rough": 0.9,
+        "bump": 0.6
+      }
+    },
+    {
+      "id": "paper",
+      "name": "Paper",
+      "category": "Other",
+      "builder": "paper",
+      "params": {
+        "base": "#F2F0EA"
+      }
+    },
+    {
+      "id": "cardboard",
+      "name": "Cardboard",
+      "category": "Other",
+      "builder": "paper",
+      "params": {
+        "base": "#B48B5E",
+        "fiber": 1.0
+      }
+    },
+    {
+      "id": "cork",
+      "name": "Cork Board",
+      "category": "Other",
+      "builder": "cork",
+      "params": {
+        "base": "#B88A5A"
+      }
+    },
+    {
+      "id": "leaf",
+      "name": "Leaf",
+      "category": "Other",
+      "builder": "leaf",
+      "params": {
+        "base": "#3E6B2E"
+      }
+    },
+    {
+      "id": "succulent",
+      "name": "Succulent Leaf",
+      "category": "Other",
+      "builder": "leaf",
+      "params": {
+        "base": "#6E8F5A"
+      }
+    },
+    {
+      "id": "soil",
+      "name": "Soil",
+      "category": "Other",
+      "builder": "concrete",
+      "params": {
+        "base": "#3B2A1E",
+        "rough": 1.0,
+        "contrast": 0.6,
+        "bump": 3.0
+      }
+    },
+    {
+      "id": "screen",
+      "name": "Screen (Off)",
+      "category": "Other",
+      "builder": "plastic",
+      "params": {
+        "base": "#050505",
+        "rough": 0.05,
+        "coat": 1.0
+      }
+    },
+    {
+      "id": "bulb",
+      "name": "Light Bulb (Emissive)",
+      "category": "Other",
+      "builder": "emission",
+      "params": {
+        "base": "#FFD9A0",
+        "strength": 25
+      }
+    },
+    {
+      "id": "canvas_art",
+      "name": "Abstract Painting",
+      "category": "Other",
+      "builder": "canvas_art",
+      "params": {
+        "c1": "#1F3B57",
+        "c2": "#E2B65B",
+        "c3": "#C2553A",
+        "c4": "#EDE6D8"
+      }
+    },
+    {
+      "id": "cutting_mat",
+      "name": "Cutting Mat (Green)",
+      "category": "3D Printing Accessories",
+      "builder": "cutting_mat",
+      "params": {
+        "base": "#14785F",
+        "base2": "#16636A",
+        "line": "#78DCC8",
+        "cut": "#9CC9BC",
+        "core": "#B9D3C4"
+      }
+    },
+    {
+      "id": "cutting_mat_gray",
+      "name": "Cutting Mat (Gray)",
+      "category": "3D Printing Accessories",
+      "builder": "cutting_mat",
+      "params": {
+        "base": "#3E4245",
+        "base2": "#353A40",
+        "line": "#E8E8E2",
+        "cut": "#8A8F92",
+        "core": "#BFC3C5"
+      }
+    },
+    {
+      "id": "pei_textured",
+      "name": "Textured PEI Plate",
+      "category": "3D Printing Accessories",
+      "builder": "pei",
+      "params": {
+        "base": "#9C7A3C",
+        "rough": 0.55,
+        "textured": 1.0
+      }
+    },
+    {
+      "id": "pei_smooth",
+      "name": "Smooth PEI Plate",
+      "category": "3D Printing Accessories",
+      "builder": "pei",
+      "params": {
+        "base": "#B48C4A",
+        "rough": 0.15,
+        "textured": 0.0
+      }
+    },
+    {
+      "id": "book_pages",
+      "name": "Book Pages",
+      "category": "Other",
+      "builder": "paper",
+      "params": {
+        "base": "#EDE5D0",
+        "rough": 0.85,
+        "fiber": 0.9
+      }
+    }
+  ]
+}

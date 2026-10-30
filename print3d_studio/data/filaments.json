@@ -1,0 +1,727 @@
+{
+  "_note": "Filament palette. To add a color, append {\"name\": ..., \"hex\": ...} to a type's 'colors' list. Multi-color filaments use a 'hexes' list.",
+  "types": {
+    "PLA_BASIC": {
+      "label": "PLA Basic (Glossy)",
+      "roughness": 0.3,
+      "specular": 0.5,
+      "coat": 0.35,
+      "sss": 0.04,
+      "sss_mm": 0.6,
+      "colors": [
+        {
+          "name": "White",
+          "hex": "#F4F4F1"
+        },
+        {
+          "name": "Black",
+          "hex": "#1C1C1C"
+        },
+        {
+          "name": "Gray",
+          "hex": "#8E9089"
+        },
+        {
+          "name": "Light Gray",
+          "hex": "#C9CAC7"
+        },
+        {
+          "name": "Red",
+          "hex": "#C12E1F"
+        },
+        {
+          "name": "Orange",
+          "hex": "#FF6A13"
+        },
+        {
+          "name": "Yellow",
+          "hex": "#F7D417"
+        },
+        {
+          "name": "Green",
+          "hex": "#00AE42"
+        },
+        {
+          "name": "Dark Green",
+          "hex": "#1F5C3A"
+        },
+        {
+          "name": "Blue",
+          "hex": "#0A59D6"
+        },
+        {
+          "name": "Navy",
+          "hex": "#0B2A5B"
+        },
+        {
+          "name": "Sky Blue",
+          "hex": "#56B7E6"
+        },
+        {
+          "name": "Turquoise",
+          "hex": "#00A3A6"
+        },
+        {
+          "name": "Purple",
+          "hex": "#5E43B7"
+        },
+        {
+          "name": "Pink",
+          "hex": "#F55A74"
+        },
+        {
+          "name": "Magenta",
+          "hex": "#EC008C"
+        },
+        {
+          "name": "Brown",
+          "hex": "#6B4532"
+        },
+        {
+          "name": "Beige",
+          "hex": "#E8DBB7"
+        },
+        {
+          "name": "Gold",
+          "hex": "#E4BD68"
+        },
+        {
+          "name": "Bronze",
+          "hex": "#847D48"
+        }
+      ],
+      "coat_rough": 0.14
+    },
+    "PLA_MATTE": {
+      "label": "PLA Matte",
+      "roughness": 0.78,
+      "specular": 0.35,
+      "sheen": 0.15,
+      "sss": 0.02,
+      "sss_mm": 0.4,
+      "layer_mul": 0.85,
+      "colors": [
+        {
+          "name": "Ivory White",
+          "hex": "#F2EEE3"
+        },
+        {
+          "name": "Charcoal",
+          "hex": "#2B2B2B"
+        },
+        {
+          "name": "Ash Gray",
+          "hex": "#9B9EA0"
+        },
+        {
+          "name": "Dark Gray",
+          "hex": "#545454"
+        },
+        {
+          "name": "Terracotta",
+          "hex": "#9D432C"
+        },
+        {
+          "name": "Mandarin",
+          "hex": "#F99963"
+        },
+        {
+          "name": "Lemon Yellow",
+          "hex": "#F7D959"
+        },
+        {
+          "name": "Grass Green",
+          "hex": "#61C680"
+        },
+        {
+          "name": "Olive Green",
+          "hex": "#68724D"
+        },
+        {
+          "name": "Ice Blue",
+          "hex": "#A3D8E1"
+        },
+        {
+          "name": "Marine Blue",
+          "hex": "#0078BF"
+        },
+        {
+          "name": "Navy",
+          "hex": "#042F56"
+        },
+        {
+          "name": "Lilac",
+          "hex": "#AE96D4"
+        },
+        {
+          "name": "Sakura Pink",
+          "hex": "#E8AFCF"
+        },
+        {
+          "name": "Chocolate",
+          "hex": "#4D3324"
+        },
+        {
+          "name": "Latte",
+          "hex": "#D3B7A7"
+        },
+        {
+          "name": "Sand",
+          "hex": "#E3D4B0"
+        }
+      ]
+    },
+    "PLA_SILK": {
+      "label": "PLA Silk",
+      "roughness": 0.2,
+      "metallic": 0.55,
+      "specular": 0.6,
+      "anisotropic": 0.55,
+      "coat": 0.35,
+      "sss": 0.0,
+      "layer_mul": 0.9,
+      "colors": [
+        {
+          "name": "Gold",
+          "hex": "#F4A925"
+        },
+        {
+          "name": "Silver",
+          "hex": "#C8C8C8"
+        },
+        {
+          "name": "Copper",
+          "hex": "#C0632A"
+        },
+        {
+          "name": "Bronze",
+          "hex": "#A06A3A"
+        },
+        {
+          "name": "Champagne",
+          "hex": "#F2D7B0"
+        },
+        {
+          "name": "Red",
+          "hex": "#C8102E"
+        },
+        {
+          "name": "Blue",
+          "hex": "#1F4FD1"
+        },
+        {
+          "name": "Green",
+          "hex": "#1F9E5A"
+        },
+        {
+          "name": "Purple",
+          "hex": "#7A3FB5"
+        },
+        {
+          "name": "Pink",
+          "hex": "#F28FB5"
+        },
+        {
+          "name": "Pearl White",
+          "hex": "#F3F0E8"
+        },
+        {
+          "name": "Black",
+          "hex": "#2A2A2A"
+        },
+        {
+          "name": "Turquoise",
+          "hex": "#20B2AA"
+        }
+      ],
+      "coat_rough": 0.1
+    },
+    "PLA_SILK_DUAL": {
+      "label": "PLA Silk Dual / Tri Color",
+      "roughness": 0.2,
+      "metallic": 0.55,
+      "specular": 0.6,
+      "anisotropic": 0.55,
+      "coat": 0.25,
+      "layer_mul": 0.9,
+      "effect": "angle",
+      "colors": [
+        {
+          "name": "Gold - Silver",
+          "hexes": [
+            "#F4A925",
+            "#C8C8C8"
+          ]
+        },
+        {
+          "name": "Red - Gold",
+          "hexes": [
+            "#C8102E",
+            "#F4A925"
+          ]
+        },
+        {
+          "name": "Blue - Purple",
+          "hexes": [
+            "#1F4FD1",
+            "#7A3FB5"
+          ]
+        },
+        {
+          "name": "Blue - Green",
+          "hexes": [
+            "#1F4FD1",
+            "#1F9E5A"
+          ]
+        },
+        {
+          "name": "Red - Blue",
+          "hexes": [
+            "#C8102E",
+            "#1F4FD1"
+          ]
+        },
+        {
+          "name": "Black - Gold",
+          "hexes": [
+            "#2A2A2A",
+            "#F4A925"
+          ]
+        },
+        {
+          "name": "Red - Blue - Gold",
+          "hexes": [
+            "#C8102E",
+            "#1F4FD1",
+            "#F4A925"
+          ]
+        },
+        {
+          "name": "Purple - Green - Copper",
+          "hexes": [
+            "#7A3FB5",
+            "#1F9E5A",
+            "#C0632A"
+          ]
+        }
+      ]
+    },
+    "PLA_SILK_RAINBOW": {
+      "label": "PLA Silk Rainbow (Gradient)",
+      "roughness": 0.2,
+      "metallic": 0.5,
+      "specular": 0.6,
+      "anisotropic": 0.55,
+      "coat": 0.25,
+      "layer_mul": 0.9,
+      "effect": "rainbow",
+      "colors": [
+        {
+          "name": "Rainbow",
+          "hexes": [
+            "#D7263D",
+            "#F46036",
+            "#F4C430",
+            "#2E9E4F",
+            "#1F4FD1",
+            "#6A3FB5"
+          ]
+        },
+        {
+          "name": "Pastel",
+          "hexes": [
+            "#F7A6C1",
+            "#F9D9A6",
+            "#BDE7C4",
+            "#A6D8F7",
+            "#C9B6F2"
+          ]
+        },
+        {
+          "name": "Ocean",
+          "hexes": [
+            "#0B3C7A",
+            "#1F7FD1",
+            "#20B2AA",
+            "#7FDBDA"
+          ]
+        },
+        {
+          "name": "Sunset",
+          "hexes": [
+            "#7A1F5C",
+            "#D7263D",
+            "#F46036",
+            "#F4C430"
+          ]
+        },
+        {
+          "name": "Fire",
+          "hexes": [
+            "#8B0000",
+            "#D7263D",
+            "#F46036",
+            "#F4A925"
+          ]
+        }
+      ]
+    },
+    "PLA_GRADIENT": {
+      "label": "PLA Gradient (Matte)",
+      "roughness": 0.5,
+      "specular": 0.45,
+      "coat": 0.05,
+      "sss": 0.03,
+      "sss_mm": 0.5,
+      "effect": "rainbow",
+      "colors": [
+        {
+          "name": "Rainbow",
+          "hexes": [
+            "#D7263D",
+            "#F46036",
+            "#F4C430",
+            "#2E9E4F",
+            "#1F4FD1",
+            "#6A3FB5"
+          ]
+        },
+        {
+          "name": "Black - White",
+          "hexes": [
+            "#1C1C1C",
+            "#F4F4F1"
+          ]
+        },
+        {
+          "name": "Forest",
+          "hexes": [
+            "#1F5C3A",
+            "#61C680",
+            "#E3D4B0"
+          ]
+        }
+      ]
+    },
+    "PETG": {
+      "label": "PETG",
+      "roughness": 0.14,
+      "specular": 0.55,
+      "coat": 0.4,
+      "sss": 0.12,
+      "sss_mm": 1.2,
+      "ior": 1.57,
+      "layer_mul": 0.9,
+      "colors": [
+        {
+          "name": "White",
+          "hex": "#F2F2EF"
+        },
+        {
+          "name": "Black",
+          "hex": "#151515"
+        },
+        {
+          "name": "Gray",
+          "hex": "#7D8083"
+        },
+        {
+          "name": "Red",
+          "hex": "#B3201F"
+        },
+        {
+          "name": "Orange",
+          "hex": "#F26A1B"
+        },
+        {
+          "name": "Blue",
+          "hex": "#1450B4"
+        },
+        {
+          "name": "Green",
+          "hex": "#168A45"
+        }
+      ],
+      "coat_rough": 0.08
+    },
+    "PETG_TRANSLUCENT": {
+      "label": "PETG Clear / Translucent",
+      "roughness": 0.18,
+      "specular": 0.6,
+      "transmission": 0.92,
+      "ior": 1.57,
+      "layer_mul": 0.9,
+      "colors": [
+        {
+          "name": "Clear",
+          "hex": "#F5F7F7"
+        },
+        {
+          "name": "Clear Blue",
+          "hex": "#3A8DDE"
+        },
+        {
+          "name": "Clear Red",
+          "hex": "#D7263D"
+        },
+        {
+          "name": "Clear Green",
+          "hex": "#3CB371"
+        },
+        {
+          "name": "Clear Orange",
+          "hex": "#FF8C1A"
+        },
+        {
+          "name": "Clear Purple",
+          "hex": "#8A4FD8"
+        },
+        {
+          "name": "Smoke",
+          "hex": "#5A5A5A"
+        }
+      ]
+    },
+    "ABS": {
+      "label": "ABS",
+      "roughness": 0.5,
+      "specular": 0.45,
+      "sss": 0.02,
+      "sss_mm": 0.4,
+      "colors": [
+        {
+          "name": "White",
+          "hex": "#EDEDE8"
+        },
+        {
+          "name": "Black",
+          "hex": "#1A1A1A"
+        },
+        {
+          "name": "Gray",
+          "hex": "#8A8C8E"
+        },
+        {
+          "name": "Red",
+          "hex": "#B22222"
+        },
+        {
+          "name": "Blue",
+          "hex": "#1E4FA3"
+        },
+        {
+          "name": "Yellow",
+          "hex": "#F2C200"
+        }
+      ],
+      "coat": 0.15,
+      "coat_rough": 0.25
+    },
+    "ASA": {
+      "label": "ASA",
+      "roughness": 0.62,
+      "specular": 0.4,
+      "colors": [
+        {
+          "name": "White",
+          "hex": "#ECECE6"
+        },
+        {
+          "name": "Black",
+          "hex": "#1D1D1D"
+        },
+        {
+          "name": "Gray",
+          "hex": "#7C7F82"
+        },
+        {
+          "name": "Green",
+          "hex": "#2F7D3A"
+        },
+        {
+          "name": "Red",
+          "hex": "#A8231F"
+        }
+      ]
+    },
+    "TPU": {
+      "label": "TPU (Flexible)",
+      "roughness": 0.55,
+      "specular": 0.4,
+      "sss": 0.25,
+      "sss_mm": 1.5,
+      "sheen": 0.1,
+      "layer_mul": 1.1,
+      "colors": [
+        {
+          "name": "White",
+          "hex": "#EAEAE4"
+        },
+        {
+          "name": "Black",
+          "hex": "#1E1E1E"
+        },
+        {
+          "name": "Red",
+          "hex": "#B5262A"
+        },
+        {
+          "name": "Blue",
+          "hex": "#2459B8"
+        },
+        {
+          "name": "Natural",
+          "hex": "#E8E2CC"
+        }
+      ]
+    },
+    "PLA_CF": {
+      "label": "PLA-CF / PETG-CF (Carbon Fiber)",
+      "roughness": 0.82,
+      "specular": 0.35,
+      "layer_mul": 0.8,
+      "effect": "carbon",
+      "colors": [
+        {
+          "name": "Black",
+          "hex": "#262626"
+        },
+        {
+          "name": "Dark Gray",
+          "hex": "#3E3F40"
+        },
+        {
+          "name": "Navy",
+          "hex": "#1C2541"
+        },
+        {
+          "name": "Burgundy",
+          "hex": "#4E1C1C"
+        }
+      ]
+    },
+    "PLA_WOOD": {
+      "label": "PLA Wood (Wood-filled)",
+      "roughness": 0.82,
+      "specular": 0.3,
+      "layer_mul": 0.95,
+      "effect": "wood",
+      "colors": [
+        {
+          "name": "Light Wood",
+          "hex": "#C49A6C"
+        },
+        {
+          "name": "Dark Wood",
+          "hex": "#7A5230"
+        },
+        {
+          "name": "Walnut",
+          "hex": "#5C3F2A"
+        },
+        {
+          "name": "Bamboo",
+          "hex": "#D9B98C"
+        }
+      ]
+    },
+    "PLA_MARBLE": {
+      "label": "PLA Marble / Stone",
+      "roughness": 0.7,
+      "specular": 0.4,
+      "effect": "marble",
+      "colors": [
+        {
+          "name": "White Marble",
+          "hex": "#E6E3DE"
+        },
+        {
+          "name": "Sandstone",
+          "hex": "#C7B299"
+        },
+        {
+          "name": "Granite Gray",
+          "hex": "#8C8C8C"
+        }
+      ]
+    },
+    "PLA_GALAXY": {
+      "label": "PLA Galaxy (Sparkle)",
+      "roughness": 0.35,
+      "specular": 0.5,
+      "coat": 0.15,
+      "effect": "sparkle",
+      "glitter": "#E8E8F0",
+      "colors": [
+        {
+          "name": "Galaxy Black",
+          "hex": "#1D1D24"
+        },
+        {
+          "name": "Galaxy Purple",
+          "hex": "#3B2A5C"
+        },
+        {
+          "name": "Galaxy Green",
+          "hex": "#1F4033"
+        },
+        {
+          "name": "Galaxy Red",
+          "hex": "#5B1A1A"
+        },
+        {
+          "name": "Galaxy Blue",
+          "hex": "#1B2A4E"
+        }
+      ]
+    },
+    "PLA_GLOW": {
+      "label": "PLA Glow in the Dark",
+      "roughness": 0.45,
+      "specular": 0.45,
+      "sss": 0.15,
+      "sss_mm": 1.0,
+      "effect": "glow",
+      "glow_strength": 0.08,
+      "colors": [
+        {
+          "name": "Glow Green",
+          "hex": "#D6EBC3",
+          "glow": "#7CFF6B"
+        },
+        {
+          "name": "Glow Blue",
+          "hex": "#D2E4F2",
+          "glow": "#5BD1FF"
+        }
+      ]
+    },
+    "RESIN": {
+      "label": "Resin (SLA / MSLA)",
+      "roughness": 0.3,
+      "specular": 0.5,
+      "coat": 0.1,
+      "sss": 0.08,
+      "sss_mm": 0.8,
+      "layer_mul": 0.12,
+      "colors": [
+        {
+          "name": "Gray",
+          "hex": "#8A8D8F"
+        },
+        {
+          "name": "White",
+          "hex": "#EDEDEA"
+        },
+        {
+          "name": "Black",
+          "hex": "#222222"
+        },
+        {
+          "name": "Beige (ABS-Like)",
+          "hex": "#D9CBB0"
+        }
+      ]
+    }
+  }
+}

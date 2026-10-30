@@ -1,0 +1,17 @@
+schema_version = "1.0.0"
+
+id = "print3d_studio"
+version = "1.0.0"
+name = "3D Print Studio"
+tagline = "Photorealistic scenes and renders for 3D-print models"
+maintainer = "Han"
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+tags = ["Render", "Material", "Scene", "Lighting"]
+
+[permissions]
+files = "Reads and writes the user palette and asset library files"
+network = "Downloads free CC0 photo textures (wood etc.) from Poly Haven on first use"
