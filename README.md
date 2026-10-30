@@ -1,121 +1,135 @@
-# 3D Print Studio — Blender eklentisi
+# 3D Print Studio — Blender add-on
 
-3D baskı için tasarlanan modellerin, gerçekten basılmış gibi görünen
-fotogerçekçi görsellerini üretmek için Blender eklentisi (Blender 4.2+, 5.2 ile test edildi).
-Arayüz İngilizcedir.
-
-*A Blender add-on that turns 3D-print models into photorealistic "already printed" renders:
+A Blender add-on that turns 3D-print models into photorealistic "already printed" renders:
 real sliced layer geometry at true scale, slicer-accurate top/bottom skin, printer flaws,
-filament palette, scanned photo textures and ready-made rooms and props. UI in English.*
+a filament palette, scanned photo textures and ready-made rooms and props.
+Requires Blender 4.2+ (tested with 5.2).
 
-![Turuncu PLA Benchy, 0.2 mm katman, 1:1 ölçek](docs/images/benchy_orange.jpg)
+![Orange PLA Benchy, 0.2 mm layers, 1:1 scale](docs/images/benchy_orange.jpg)
 
-| %100 yakın plan | Masa sahnesi | Üst yüzey testi |
+| 100 % crop | Desk scene | Top layer test |
 |---|---|---|
 | ![](docs/images/benchy_orange_100pct.jpg) | ![](docs/images/desk_scene.jpg) | ![](docs/images/top_layer_test.jpg) |
 
-## Kurulum
+## Installation
 
-1. Zip'i oluşturun (Blender'ın kendi Python'u ile):
+1. Build the zip with Blender's own Python:
    `"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/paketle.py`
-   → `dist/print3d_studio-1.0.0.zip` oluşur.
-2. Blender → *Edit > Preferences > Get Extensions* → sağ üstteki ▾ → **Install from Disk…** → zip'i seçin.
-3. 3D görünümde **N** → **3D Print** sekmesi.
+   → creates `dist/print3d_studio-1.0.0.zip`.
+2. Blender → *Edit > Preferences > Get Extensions* → ▾ in the top right → **Install from Disk…** → pick the zip.
+3. In the 3D Viewport press **N** → **3D Print** tab.
 
-Geliştirme sırasında kurmadan denemek için:
+To try it during development without installing:
 
 ```bash
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --python tools/dev_start.py
 ```
 
-## Hızlı kullanım
+## Quick start
 
-1. STL/3MF modelinizi içe aktarın ve seçin.
-2. **One-Click Scene** → model mm'den gerçek boyuta ölçeklenir, filament malzemesi
-   uygulanır, oda + masa + dekor (kesim matı, lamba, makara, bitki, kitaplar, kupa)
-   kurulur, model mata oturtulur, ışık, ürün kamerası ve Cycles ayarları yapılır,
-   görünüm kameraya geçer.
+1. Import your STL/3MF model and select it.
+2. **One-Click Scene** → the model is scaled from millimeters to real size, sliced into
+   real layers and given the filament material; a room, desk and decor (cutting mat, lamp,
+   spool, plant, books, mug) are built, the model is set on the mat, and lighting, a product
+   camera and Cycles are configured. The viewport switches to the camera.
 3. **Render > Render Image** (F12).
 
-## Paneller
+## Panels
 
-| Panel | İçerik |
+| Panel | Contents |
 |---|---|
-| Print & Filament | Type / Color, Layer Height, Line Width, **Direction** (basım yönü: Z+/Z-/X/Y/Custom Angle), Layer Visibility, Layer Irregularity, Seam, Top Surface Lines, Color Cycle Height. Değişiklikler canlı uygulanır. |
-| Material Library | Ahşap, metal, taş, kumaş, deri, cam, seramik, duvar/zemin, kesim matı, PEI… Her malzeme kendi yüzey kabartmasıyla (bump) gelir. |
-| Room & Environment | Ölçülü oda (duvar/zemin, pencere, tavan, süpürgelik) veya kıvrımlı stüdyo fonu. |
-| Props | Masa, sehpa, sandalye, kitaplık, raf, kitaplar (kapak + sayfa bloğu), masa lambası (gerçek ışıklı), sukulent, kupa, kalemlik, kesim matı, PEI tabla, filament makarası, laptop, halı, tablo + kendi kütüphaneniz. |
-| Lighting & Camera | Daylight (Window), Golden Hour, Studio, Evening, HDRI. Ürün kamerası: odak, diyafram (bokeh), açı. |
-| Render | Preview / Final / Ultra, sosyal medya boyutları, GPU. |
-| Extend Palette | Kalıcı yeni filament rengi ve yeni malzeme. |
+| Print & Filament | Type / Color, Layer Height, Line Width, **Direction** (print orientation: Z+/Z-/X/Y/Custom Angle), Layer Visibility, Layer Irregularity, Seam, Top Surface Lines, Real Layer Geometry, Print Imperfections, Dust & Handling, Color Cycle Height. Changes apply live. |
+| Material Library | Wood (incl. scanned photo woods), metal, stone, fabric, leather, glass, ceramic, walls/floors, cutting mat, PEI… Every material comes with its own surface relief (bump). |
+| Room & Environment | Room built to size (walls/floor, window, ceiling, baseboard) or a curved studio backdrop. |
+| Props | Desk, coffee table, chair, bookshelf, wall shelf, books (cover + page block), desk lamp (real light), succulent, mug, pen cup, cutting mat, PEI build plate, filament spool, laptop, rug, picture frame + your own asset library. |
+| Lighting & Camera | Daylight (Window), Golden Hour, Studio, Evening, HDRI. Product camera: focus, aperture (bokeh), angle, roll. |
+| Render | Preview / Final / Ultra, social-media sizes, GPU, Lens Effects. |
+| Extend Palette | Permanently add new filament colors and materials. |
 
-## Gerçekçilik notları
+## How the realism works
 
-- Masa: yağlı meşe, birleştirilmiş lamellerle (her lamel farklı ton), düzensiz yıllık
-  halkalar, lif çizgileri, gözenek kabartması ve saten (dağınık) parlaklık.
-- Kesim matı: mat PVC mikro dokusu, nane yeşili ızgara, kenarda cetvel çizgileri,
-  çapraz kılavuz çizgileri, hafif bıçak izleri, kenarda açık renkli çekirdek katmanı.
-- Katman çizgileri gerçek ölçekte hesaplanır (bump mesafesi = bir gerçek katman, abartı yok);
-  yakın çekimde ve 2K+ çözünürlükte belirginleşir.
-- **Real Layer Geometry** (varsayılan açık): model bir slicer gibi her katmanın ortasından
-  kesilip katman kalınlığında yeniden kurulur (`scene/slicer.py`). Eğimli tavanlar gerçek
-  teraslar, siluetler gerçek merdiven olur. Orijinal mesh saklanır; kapatınca geri gelir
-  (modeli düzenlemek için kapatın). Benchy: 240 katman, ~5 sn. Delikli (manifold olmayan)
-  mesh'lerde açık konturlar 5 katman yüksekliğine kadar boşluklardan birleştirilir.
-- **Yüzey kuralı (slicer gibi):** dilimleyici her kapak yüzünü sınıflandırır (`p3d_skin`):
-  üstünde bir sonraki katman yoksa *üst yüzey* (çevre çizgileri + dolgu), altında önceki katman
-  yoksa *alt yüzey* (sarkık, mat çizgiler), ilk katman *tabla yüzü* (bastırılmış, parlak).
-  Açıklığı ~0.25 mm'den (≈ 0.6 çizgi genişliği) dar çıkıntılar ve üstü kapalı yüzeyler doku
-  almaz; z-wobble'ın duvarlarda her katmanda yarattığı mikro basamaklar bu yüzden temiz kalır.
-  Sınırı kesen kapak üçgenleri, sınıf netleşene kadar en uzun kenarından bölünür.
-- Üst yüzey (top layer): her katman kapağında kenardan içeri 2 çevre çizgisi (gerçek kenar
-  mesafesi dilimleyicide `p3d_edge` niteliği olarak hesaplanır; ince duvarlarda daralır), içte
-  katman başına yön değiştiren 45° dolgu. Her çizginin yüksekliği/parlaklığı farklı, çizgiler
-  hafif dalgalı ve boylarınca ~0.5 mm'lik ekstrüzyon dalgalanması var.
-- **Print Imperfections** (1 = iyi ayarlı hobi yazıcı): 8 mm vida adımlı ~0.01 mm z-wobble,
-  katmanlar arası ~0.008 mm genişlik farkı, ilk katmanda 0.15 mm elephant foot.
-  **Dust & Handling**: üst yüzeylerde seyrek toz zerrecikleri, hafif mat el izleri.
-  Tüm kenarlar ~0.07 mm yuvarlatılır (Bevel).
-- **Lens Effects** (Render paneli): hafif lens bozulması ve renk saçılması, bloom, vinyet,
-  sensör greni. **Camera Roll**: kadraja 0.6° doğal eğim.
-- `tools/top_test.py`: ahşap masada 40×40×5 mm kare baskıyı sıyırma ışıkla render eder
-  (üst yüzey kontrolü).
-- **Fotoğraf dokular (Poly Haven, CC0):** Material Library > Wood içindeki "(Photo)" malzemeler
-  ve masa, gerçek taranmış ahşap kullanır (renk + normal + pürüzlülük, gerçek boyutunda;
-  ör. Oak Veneer 1.83 m). İlk kullanımda indirilir ve kullanıcı klasöründe saklanır.
-  Bunun için *Preferences > System > Network > Allow Online Access* açık olmalı; kapalıysa
-  önbellekteki başka bir çözünürlük, o da yoksa prosedürel ahşap kullanılır. Çözünürlük:
-  eklenti tercihlerinde *Photo Texture Resolution* (varsayılan 4K ≈ 43 MB/ahşap, 8K ≈ 150 MB).
-  Doku pikselinden küçük lif ve gözenekler prosedürel eklenir. Eşyalar gerçek ölçekli
-  (1 UV = 1 m) kutu projeksiyonlu UV ile oluşturulur.
-- Kapalıyken aynı terasları shader taklit eder (katman başına `katman / tan(eğim)` genişliğinde
-  düz teras, yuvarlak çevre kenarı, kenara paralel iki çevre çizgisi, içte çapraz dolgu).
-- STL'ler düz gölgeli gelir; malzeme uygulanınca eğri yüzeyler yumuşatılır, 35° üstü kenarlar keskin kalır.
-- Kalibrasyon: `tools/benchy_calib.py` modeli 1:1 ölçekte stüdyo fonunda render eder
-  (`samples/benchy.stl`, sonuçlar `renders/calib`).
+### Real layer geometry
+- **Real Layer Geometry** (on by default): like a slicer, the model is cut at the middle of
+  every layer and rebuilt one layer height thick (`scene/slicer.py`). Sloped tops become real
+  terraces (a 5.5° roof at 0.2 mm gives ~2 mm steps) and silhouettes become real stair steps.
+- The original mesh is kept; turn the option off to get it back (e.g. to edit the model).
+- Benchy at 0.2 mm: 240 layers, ~16 s to slice.
+- On non-manifold meshes, open contours are bridged across gaps up to 5 layer heights.
+- Layer caps are watertight: the perimeter band and infill share vertices, and points added
+  while splitting triangles are welded into neighbouring faces, so no hairline cracks show.
 
-## Paleti genişletmek
+### Surface rule (like a slicer)
+Every cap face is classified (`p3d_skin` attribute):
+- **Top skin** where nothing is printed above it: two perimeter loops along the outline, then
+  45° infill alternating per layer. The true distance from the outline is stored per face
+  corner (`p3d_edge`) and narrows on thin walls.
+- **Bottom skin** where nothing is printed below it (overhangs): sagging, matte lines.
+- **Bed side** for the first layer: pressed flat and glossy.
+- Ledges narrower than ~0.25 mm (≈ 0.6 line widths) and covered faces get no skin, so the
+  micro steps that Z wobble leaves on walls stay clean.
+- Cap triangles that straddle the exposed/covered border are bisected along their longest
+  edge until the class is clear.
 
-- Panelden: **Extend Palette**. Eklenenler kullanıcı klasörüne yazılır
-  (`user_filaments.json`, `user_materials.json`), güncellemede kaybolmaz.
-- Kendi eşyanız: seçin → **Props > My Asset Library > Save**. Ya da `.blend`
-  dosyalarını `print3d_studio/assets/` veya tercihlerdeki *Extra Asset Folder* içine koyun.
-- Kodla: `data/filaments.json`, `data/materials.json`, kurucular `materials/surfaces.py`,
-  eşyalar `scene/furniture.py` (`@item(...)`).
+### Lines and printer flaws
+- Layer lines are computed at real scale (bump distance = one real layer, no exaggeration).
+  They become visible in close-ups and at 2K+ resolution.
+- Top lines are never laser straight: every line has its own height and gloss, wanders
+  slightly and ripples along its length with ~0.5 mm extrusion pulses.
+- **Print Imperfections** (1 = a well-tuned hobby printer): ~0.01 mm Z wobble from an 8 mm
+  lead screw, ~0.008 mm width variation between layers, 0.15 mm elephant foot on the first layer.
+- **Dust & Handling**: sparse dust specks on upward faces and faint matte handling marks.
+- All edges are rounded by ~0.07 mm (Bevel).
+- With Real Layer Geometry off, the shader fakes the same terraces (flat steps
+  `layer / tan(slope)` wide, rounded perimeter edge, two perimeter lines, diagonal infill).
+- STLs arrive flat shaded; when the material is applied, curved areas are smoothed and edges
+  sharper than 35° stay crisp.
 
-## Testler
+### Camera
+- **Lens Effects** (Render panel): slight lens distortion and chromatic aberration, bloom,
+  vignetting and sensor grain.
+- **Camera Roll**: a natural 0.6° tilt of the horizon.
+
+### Scene materials
+- **Photo textures (Poly Haven, CC0):** the "(Photo)" materials under Material Library > Wood
+  and the desk use real scanned wood (color + normal + roughness at true size, e.g. Oak Veneer
+  1.83 m).
+  - They are downloaded on first use and cached in the user folder. This needs
+    *Preferences > System > Network > Allow Online Access*. When it is off, another cached
+    resolution is used; if none exists, procedural wood is used instead.
+  - Resolution is set in the add-on preferences under *Photo Texture Resolution*
+    (default 4K ≈ 43 MB per wood, 8K ≈ 150 MB).
+  - Fibres and pores smaller than one texel are added procedurally.
+  - Props are built with real-scale box-projected UVs (1 UV unit = 1 m).
+- **Cutting mat:** matte PVC micro texture, mint grid, ruler ticks along the edges, diagonal
+  guide lines, light knife marks and a lighter core layer visible on the edge.
+
+## Extending the palette
+
+- From the panel: **Extend Palette**. Additions are written to the user folder
+  (`user_filaments.json`, `user_materials.json`) and survive updates.
+- Your own props: select them → **Props > My Asset Library > Save**, or put `.blend` files in
+  `print3d_studio/assets/` or in the *Extra Asset Folder* set in the preferences.
+- In code: `data/filaments.json`, `data/materials.json`, material builders in
+  `materials/surfaces.py`, props in `scene/furniture.py` (`@item(...)`).
+
+## Tests and calibration
 
 ```bash
-# arka planda tam sahne + tüm eşyalar
+# full scene + every prop, in the background
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/test_render.py -- renders/test.png DESK_DAY 64 PLA_SILK --all
-# yakın çekim gerçekçilik kontrolü
+# close-up realism check on the desk
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/closeup_test.py -- renders/close.png 384 PLA_BASIC 1.15 14
-# gerçek Blender penceresinde arayüz testi (ekran görüntüleri renders/ui içine)
+# 1:1 calibration render of a real STL on a studio backdrop
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/benchy_calib.py -- samples/benchy.stl renders/benchy.png "#F2621B" "#D6D3CE" 145 18 512 2400
+# top-surface check: a 40 x 40 x 5 mm square on the desk under a grazing lamp
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --online-mode --python tools/top_test.py -- renders/top.png 256
+# UI test in a real Blender window (screenshots go to renders/ui)
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --factory-startup --python tools/ui_test.py -- renders/ui
 ```
 
-## Lisans ve kaynaklar
+## License and credits
 
-- Eklenti kodu: [GPL-3.0-or-later](LICENSE) (Blender eklentileri için gerekli lisans).
-- Fotoğraf dokular: [Poly Haven](https://polyhaven.com), CC0. Depoda değil, ilk kullanımda indirilir.
-- Örnek model: #3DBenchy, Creative Tools, CC BY-ND 4.0 — bkz. [samples/README.md](samples/README.md).
+- Add-on code: [GPL-3.0-or-later](LICENSE) (required for Blender add-ons).
+- Photo textures: [Poly Haven](https://polyhaven.com), CC0. Not stored in this repository;
+  they are downloaded on first use.
+- Sample model: #3DBenchy by Creative Tools, CC BY-ND 4.0 — see [samples/README.md](samples/README.md).
