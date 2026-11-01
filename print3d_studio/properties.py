@@ -1,11 +1,12 @@
 import math
+import os
 
 import bpy
 from bpy.props import (BoolProperty, EnumProperty, FloatProperty, FloatVectorProperty,
                        PointerProperty, StringProperty)
 
 from . import palette
-from .scene import furniture
+from .scene import camera, furniture
 
 
 def _apply(self, context):
@@ -68,6 +69,43 @@ class P3D_ObjectProps(bpy.types.PropertyGroup):
     rainbow_period: FloatProperty(name="Color Cycle Height (mm)", default=25.0, min=1.0, max=500.0, update=_apply)
 
 
+def _update_snap(self, context):
+    from . import operators
+    operators.surface_snap(context.scene, self.surface_snap)
+
+
+def _room_changed(self, context):
+    # an existing room follows its settings by itself. Dragging a size field changes the
+    # value many times a second, so the rebuild waits until the value has stopped changing
+    if bpy.app.timers.is_registered(_rebuild_room):
+        bpy.app.timers.unregister(_rebuild_room)
+    bpy.app.timers.register(_rebuild_room, first_interval=0.3)
+
+
+def _rebuild_room():
+    from .scene import room
+    scene = bpy.context.scene
+    coll = bpy.data.collections.get(room.COLLECTION)
+    if scene is not None and coll is not None and any(o.name.startswith("Walls") for o in coll.objects):
+        room.build_room(bpy.context, scene.p3d)
+    return None
+
+
+def _carry_changed(self, context):
+    from .scene import carry
+    if self.carry_items:
+        carry.update(context.scene)
+    else:
+        carry.release_all(context.scene)
+
+
+def _drive(self, context):
+    # enum buttons apply on mouse press (operator buttons only on release), so a held
+    # button can start the camera drive, which ends on the release
+    if self.cam_drive != 'NONE':
+        bpy.ops.p3d.cam_drive('INVOKE_DEFAULT')
+
+
 def _mat_default(mid):
     return palette.mat_number(mid)
 
@@ -75,12 +113,25 @@ def _mat_default(mid):
 class P3D_SceneProps(bpy.types.PropertyGroup):
     # one-click scene
     quick_preset: EnumProperty(name="Scene", items=[
+        ('DESK_CINEMATIC', "Room + Desk (Cinematic Sun)", ""),
         ('DESK_DAY', "Room + Desk (Daylight)", ""),
         ('DESK_GOLDEN', "Room + Desk (Golden Hour)", ""),
         ('DESK_EVENING', "Room + Desk (Evening)", ""),
         ('STUDIO', "Studio Backdrop", ""),
     ])
-    quick_decor: BoolProperty(name="Add Desk Decor", default=True)
+    quick_decor: BoolProperty(name="Furnish Room and Desk", default=True,
+                              description="Desk decor (lamp, plant, books, postcards...) and room "
+                                          "furniture (shelves, floor plant, armchair, coffee table)")
+    surface_snap: BoolProperty(
+        name="Drag on Surfaces", default=True,
+        description="While moving (G / Move tool) an object it sits on the desk, mat or floor under "
+                    "the cursor (Blender's Face Project snapping, toggled with the magnet icon too)",
+        update=_update_snap)
+    carry_items: BoolProperty(
+        name="Carry Things on Top", default=True,
+        description="Whatever stands on a prop moves with it (move the desk and the mat, books "
+                    "and the print on it come along), like real objects",
+        update=_carry_changed)
     scale_unit: EnumProperty(name="Model Units", items=[
         ('MM', "Millimeters (STL default)", ""), ('CM', "Centimeters", ""), ('IN', "Inches", ""),
         ('M', "Meters", "")])
@@ -90,19 +141,21 @@ class P3D_SceneProps(bpy.types.PropertyGroup):
     mat_item: EnumProperty(name="Material", items=palette.enum_mats_in_cat)
 
     # room
-    room_w: FloatProperty(name="Width", default=4.0, min=1.0, max=30.0, unit='LENGTH')
-    room_d: FloatProperty(name="Depth", default=3.5, min=1.0, max=30.0, unit='LENGTH')
-    room_h: FloatProperty(name="Height", default=2.7, min=2.0, max=8.0, unit='LENGTH')
-    room_wall_mat: EnumProperty(name="Walls", items=palette.enum_all_mats, default=_mat_default('paint_warm'))
-    room_floor_mat: EnumProperty(name="Floor", items=palette.enum_all_mats, default=_mat_default('parquet_oak'))
-    room_window: EnumProperty(name="Window", default='LEFT', items=[
+    room_w: FloatProperty(name="Width", default=4.0, min=1.0, max=30.0, unit='LENGTH', update=_room_changed)
+    room_d: FloatProperty(name="Depth", default=3.5, min=1.0, max=30.0, unit='LENGTH', update=_room_changed)
+    room_h: FloatProperty(name="Height", default=2.7, min=2.0, max=8.0, unit='LENGTH', update=_room_changed)
+    room_wall_mat: EnumProperty(name="Walls", items=palette.enum_wall_mats, default=_mat_default('paint_warm'),
+                                update=_room_changed)
+    room_floor_mat: EnumProperty(name="Floor", items=palette.enum_floor_mats, default=_mat_default('parquet_oak'),
+                                 update=_room_changed)
+    room_window: EnumProperty(name="Window", default='LEFT', update=_room_changed, items=[
         ('NONE', "None", ""), ('LEFT', "Left Wall", ""), ('RIGHT', "Right Wall", ""), ('BACK', "Back Wall", "")])
-    window_w: FloatProperty(name="Window Width", default=1.4, min=0.3, max=6.0, unit='LENGTH')
-    window_h: FloatProperty(name="Window Height", default=1.4, min=0.3, max=4.0, unit='LENGTH')
-    window_sill: FloatProperty(name="Sill Height", default=0.9, min=0.0, max=3.0, unit='LENGTH')
-    room_ceiling: BoolProperty(name="Ceiling", default=True)
-    room_front: BoolProperty(name="Front Wall", default=False)
-    room_baseboard: BoolProperty(name="Baseboard", default=True)
+    window_w: FloatProperty(name="Window Width", default=1.4, min=0.3, max=6.0, unit='LENGTH', update=_room_changed)
+    window_h: FloatProperty(name="Window Height", default=1.4, min=0.3, max=4.0, unit='LENGTH', update=_room_changed)
+    window_sill: FloatProperty(name="Sill Height", default=0.9, min=0.0, max=3.0, unit='LENGTH', update=_room_changed)
+    room_ceiling: BoolProperty(name="Ceiling", default=True, update=_room_changed)
+    room_front: BoolProperty(name="Front Wall", default=False, update=_room_changed)
+    room_baseboard: BoolProperty(name="Baseboard", default=True, update=_room_changed)
 
     cove_w: FloatProperty(name="Width", default=1.6, min=0.2, unit='LENGTH')
     cove_d: FloatProperty(name="Depth", default=1.4, min=0.2, unit='LENGTH')
@@ -132,9 +185,14 @@ class P3D_SceneProps(bpy.types.PropertyGroup):
 
     # lighting & camera
     light_preset: EnumProperty(name="Lighting", default='WINDOW_DAY', items=[
+        ('CINEMATIC', "Cinematic Sun (Moody)", "Low warm sun through the window, dark room, "
+         "high contrast"),
         ('WINDOW_DAY', "Daylight (Window)", ""), ('GOLDEN', "Golden Hour", ""),
         ('STUDIO', "Studio (3 Softboxes)", ""), ('EVENING', "Evening / Lamp", ""), ('HDRI', "HDRI File", "")])
     light_strength: FloatProperty(name="Light Strength", default=1.0, min=0.0, max=10.0)
+    light_haze: BoolProperty(name="Light Shafts (Haze)", default=True,
+                             description="Thin haze in the room so the sun beams become visible "
+                                         "(renders slower)")
     sun_elev: FloatProperty(name="Sun Elevation", default=32.0, min=-5, max=90)
     sun_azim: FloatProperty(name="Sun Side Angle", default=25.0, min=-90, max=90)
     hdri_path: StringProperty(name="HDRI", subtype='FILE_PATH')
@@ -149,6 +207,16 @@ class P3D_SceneProps(bpy.types.PropertyGroup):
     cam_roll: FloatProperty(name="Camera Roll", default=0.6, min=-15, max=15,
                             description="Slight tilt of the horizon in degrees, like a hand-set tripod")
     use_dof: BoolProperty(name="Depth of Field (Bokeh)", default=True)
+    cam_step_move: FloatProperty(name="Move Step", default=0.005, min=0.0001, max=1.0, unit='LENGTH',
+                                 precision=4, description="How far one move button press goes")
+    cam_step_turn: FloatProperty(name="Turn Step", default=1.0, min=0.05, max=45.0,
+                                 description="Degrees per turn / orbit button press")
+    cam_drive: EnumProperty(name="Camera Control", update=_drive, items=[('NONE', "None", "")] + [
+        (k, k.replace("_", " ").title(), "Click: one step. Hold: keeps going at a steady speed "
+         "(10 steps per second)") for k in camera.DRIVES])
+    hide_render_sync: BoolProperty(
+        name="Hidden Objects Stay Out of Render", default=True,
+        description="Objects hidden in the viewport (eye icon / H) are hidden in the render too")
 
     # render
     render_quality: EnumProperty(name="Quality", default='FINAL', items=[
@@ -169,9 +237,18 @@ def _asset_items():
     return _ASSETS
 
 
+def _asset_label(entry):
+    path, coll = entry.rsplit("::", 1)
+    if coll.lower().startswith("collection"):
+        coll = os.path.splitext(os.path.basename(path))[0]
+    for suffix in ("_Blender_Cycles", "_Cycles"):
+        coll = coll[:-len(suffix)] if coll.endswith(suffix) else coll
+    return coll
+
+
 def set_assets(entries):
     global _ASSETS
-    _ASSETS = [(e, e.replace("::", " > "), "", i) for i, e in enumerate(entries)] or \
+    _ASSETS = [(e, _asset_label(e), e.replace("::", " > "), i) for i, e in enumerate(entries)] or \
         [("NONE", "(Library empty)", "", 0)]
 
 

@@ -29,9 +29,18 @@ To try it during development without installing:
 
 1. Import your STL/3MF model and select it.
 2. **One-Click Scene** → the model is scaled from millimeters to real size, sliced into
-   real layers and given the filament material; a room, desk and decor (cutting mat, lamp,
-   spool, plant, books, mug) are built, the model is set on the mat, and lighting, a product
-   camera and Cycles are configured. The viewport switches to the camera.
+   real layers and given the filament material; a room and desk are built and furnished
+   (**Furnish Room and Desk**), the model is set on the mat, and lighting, a product camera and
+   Cycles are configured.
+   - On the desk: cutting mat, arm desk lamp, small potted plant, a stack of scanned books, mug,
+     postcards, vintage stapler.
+   - In the room: display shelves dressed with books, a plant and a lighter; a floor plant by
+     the window; a green armchair with a chess set on a coffee table.
+   - **Room + Desk (Cinematic Sun)** (the default): a low, strong, warm sun through the window,
+     little sky light, high-contrast AgX, faint haze that shows the sun beams, and a low, wide
+     open product camera so the desk props melt into bokeh. The other presets are Daylight,
+     Golden Hour, Evening (the desk lamp is switched on) and Studio. **Drag on Surfaces** is turned on: while you move the model
+   (G or the Move tool) it sits on the desk, mat, books or floor under the cursor. The viewport switches to the camera.
 3. **Render > Render Image** (F12).
 
 ## Panels
@@ -41,8 +50,9 @@ To try it during development without installing:
 | Print & Filament | Type / Color, Layer Height, Line Width, **Direction** (print orientation: Z+/Z-/X/Y/Custom Angle), Layer Visibility, Layer Irregularity, Seam, Top Surface Lines, Real Layer Geometry, Print Imperfections, Dust & Handling, Color Cycle Height. Changes apply live. |
 | Material Library | Wood (incl. scanned photo woods), metal, stone, fabric, leather, glass, ceramic, walls/floors, cutting mat, PEI… Every material comes with its own surface relief (bump). |
 | Room & Environment | Room built to size (walls/floor, window, ceiling, baseboard) or a curved studio backdrop. |
-| Props | Desk, coffee table, chair, bookshelf, wall shelf, books (cover + page block), desk lamp (real light), succulent, mug, pen cup, cutting mat, PEI build plate, filament spool, laptop, rug, picture frame + your own asset library. |
-| Lighting & Camera | Daylight (Window), Golden Hour, Studio, Evening, HDRI. Product camera: focus, aperture (bokeh), angle, roll. |
+| Props | Built: desk, coffee table, chair, bookshelf, wall shelf, book stack, mug, pen cup, cutting mat, PEI build plate, laptop, rug, picture frame. Scanned (Poly Haven, CC0, shipped): desk and floor plants, green armchair, dining chair, low wooden table, modern coffee table, display shelves, chess set, arm desk lamp (with a real light), book rows and stacks, postcards, vintage stapler and lighter, street lamp, wall lantern. Plus your own asset library. |
+| Camera Controls | In camera view: **Pick Focus Point** (click any point; the focus stays on it even when the camera or object moves), bokeh / f-stop, Move (forward/back, up/down, left/right), Turn in Place (pan, tilt, roll), Orbit Around Focus, step sizes. |
+| Lighting & Camera | Cinematic Sun (with Light Shafts), Daylight (Window), Golden Hour, Studio, Evening, HDRI. Product camera: focus, aperture (bokeh), angle, roll. |
 | Render | Preview / Final / Ultra, social-media sizes, GPU, Lens Effects. |
 | Extend Palette | Permanently add new filament colors and materials. |
 
@@ -100,8 +110,77 @@ Every cap face is classified (`p3d_skin` attribute):
     (default 4K ≈ 43 MB per wood, 8K ≈ 150 MB).
   - Fibres and pores smaller than one texel are added procedurally.
   - Props are built with real-scale box-projected UVs (1 UV unit = 1 m).
+- **Red Brick Wall:** our own 2K PBR set (`assets/textures/BrickRedOwn`: color, normal,
+  roughness, height, AO), generated with AI by the author and shipped with the add-on. It tiles
+  seamlessly at 1.8 m (24 courses of 7.5 cm). The normal map's X channel was flipped to OpenGL
+  and the gloss map dropped.
+- **Poly Haven sets (CC0, shipped):** 4K JPG conversions of Poly Haven's downloads (EXR/PNG maps to JPG), at
+  the real size given in each set's .blend.
+  - Walls: Plastered Brick Wall, White Stucco, White Stucco Coarse, Layered Concrete Wall.
+  - Floor: Old Wooden Floor.
+  - Material Library > Fabric & Leather: Brown Leather (Scan), Leather-Look Fabric, Hessian
+    (Burlap).
+  - Material Library > Fabric & Leather also has Wool Bouclé.
+  - The relief depth comes from each set's displacement scale.
+- **Poly Haven models (CC0, shipped)** in `assets/models`: `GreenChair_01`, `dining_chair_02`,
+  `WoodenTable_01`, `modern_coffee_table_02`, `wooden_display_shelves_01`, `chess_set`,
+  `desk_lamp_arm_01`, `decorative_book_set_01`, `postcard_set_01`, `potted_plant_02`,
+  `potted_plant_04`, `vintage_stapler`, `vintage_lighter`, `street_lamp_01`, `street_lamp_02`.
+  - Maps were converted to JPG (PNG where the alpha is used) at the resolution the object
+    needs, about 0.25 mm per pixel: 4K for furniture, 1-2K for small things like books.
+  - Book rows, book stacks and postcards take single objects out of the book and postcard sets.
+  - The desk lamp is posed with its own rig so the shade looks down onto the desk; a spot light
+    sits in the shade and is on only in the Evening preset.
+- **Wall relief:** on the room walls and floor, textures with a height map get true
+  displacement (Cycles adaptive subdivision), so mortar joints cast real shadows. Walls are
+  built as one connected mesh so the displaced surface has no cracks.
 - **Cutting mat:** matte PVC micro texture, mint grid, ruler ticks along the edges, diagonal
   guide lines, light knife marks and a lighter core layer visible on the edge.
+
+## Local asset library (downloaded textures and models)
+
+**Props > My Asset Library > Import Asset Zips…** takes zips from ambientCG, Poliigon and
+similar sites (file names like `_COL_4K`, `_NRM`, `_ROUGHNESS`, `BaseColor`, `Normal`…):
+- A zip with a `.blend` file is a **model**. It is listed in *My Asset Library* and appended
+  at real size with its own materials; a texture missing at one resolution is replaced by
+  the same map at another.
+- A zip with only maps is a **texture**. It becomes a "(Library)" material using the `pbr`
+  builder (color, normal, roughness or gloss, metal, AO, opacity, height). Maps larger than
+  *Photo Texture Resolution* are scaled down once on import.
+- Files go to `<user folder>/library/`, never into the add-on or this repository (most
+  download licenses forbid redistributing them).
+- From the command line: `blender -b --factory-startup --python tools/import_assets.py -- <library folder> 4 a.zip b.zip`.
+
+## Plank floor from your own photo
+
+The floor is laid out by the `planks` shader the way it is installed: boards of one width and
+one length, each row's end joints shifted by a fixed amount (19 cm x 121.5 cm boards, 24 cm
+stagger for the default floor). Every board shows a random real board from an atlas, sometimes
+turned 180 degrees, and gets bevelled grooves along its edges, so the floor never repeats in a
+grid.
+
+`tools/make_floor_atlas.py` makes that atlas from a top-down photo: it straightens the boards
+(camera tilt and perspective), removes light falloff and color cast, finds the end joints and
+cuts out every whole board (the longest one gives the board length unless you pass it).
+
+```bash
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/make_floor_atlas.py -- photo.jpg print3d_studio/assets/textures/MyFloor MyFloor 190 [length mm]
+```
+
+**Chevron:** `tools/make_chevron_atlas.py` does the same for a chevron floor: it finds the band
+lines and the slant of the boards (the V joints), cuts out every whole board and stores the
+joint spacing, band depth and slant; the `chevron` shader lays the bands out with the slant
+flipping every band and draws the grout. Pass the board width in mm (measured square to the
+long edges):
+
+```bash
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup --python tools/make_chevron_atlas.py -- photo.jpg print3d_studio/assets/textures/MyChevron MyChevron 70
+```
+
+The default floor (**Oak Laminate (Photo)**) comes from our own photo and ships with the add-on
+(`assets/textures/LaminateOakPhoto`); **Oak Chevron Tiles (Photo)** (7 cm boards) likewise
+(`assets/textures/ChevronOakPhoto`). All floor textures are our own, so they can be shared. Board width, length and stagger can be overridden with
+`board_w`, `board_len` and `stagger` in `data/materials.json`.
 
 ## Extending the palette
 
@@ -130,6 +209,9 @@ Every cap face is classified (`p3d_skin` attribute):
 ## License and credits
 
 - Add-on code: [GPL-3.0-or-later](LICENSE) (required for Blender add-ons).
-- Photo textures: [Poly Haven](https://polyhaven.com), CC0. Not stored in this repository;
-  they are downloaded on first use.
+- Textures and models from [Poly Haven](https://polyhaven.com), CC0: the wood photo textures
+  are downloaded on first use; the wall, floor and fabric sets and the models listed above ship
+  in `print3d_studio/assets`.
+- Red Brick Wall and the oak floors: made by the author, released with the add-on.
+- No asset in this repository is under a license that forbids redistribution.
 - Sample model: #3DBenchy by Creative Tools, CC BY-ND 4.0 — see [samples/README.md](samples/README.md).

@@ -12,3 +12,6 @@ dist/
 renders/
 *.blend
 *.blend1
+
+# ...except the CC0 models that ship with the add-on
+!print3d_studio/assets/models/**/*.blend

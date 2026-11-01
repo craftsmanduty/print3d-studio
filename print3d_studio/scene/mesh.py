@@ -32,6 +32,30 @@ class MB:
         ret = bmesh.ops.create_cube(self.bm, size=1.0, matrix=m)
         self._tag(ret['verts'], mat=mat)
 
+    def slab(self, along, fixed, us, zs, T, mat, empty=()):
+        """A wall of thickness T as one connected mesh: a grid of cells between the lines
+        `us` (along the wall) and `zs` (height), skipping the (i, j) cells in `empty`
+        (openings). Shared vertices keep displaced surfaces from cracking at the cell joins."""
+        bm = self.bm
+
+        def pt(u, z, side):
+            off = fixed + side * T / 2
+            return Vector((u, off, z)) if along == 'X' else Vector((off, u, z))
+
+        vs = {(i, j, s): bm.verts.new(pt(u, z, s)) for i, u in enumerate(us) for j, z in enumerate(zs)
+              for s in (-1, 1)}
+        full = {(i, j) for i in range(len(us) - 1) for j in range(len(zs) - 1)} - set(empty)
+        faces = []
+        for i, j in full:
+            for s in (-1, 1):
+                faces.append(bm.faces.new([vs[i, j, s], vs[i + 1, j, s], vs[i + 1, j + 1, s], vs[i, j + 1, s]]))
+            # side faces on the outline and around the openings
+            for (ni, nj), a, b in (((i - 1, j), (i, j), (i, j + 1)), ((i + 1, j), (i + 1, j), (i + 1, j + 1)),
+                                   ((i, j - 1), (i, j), (i + 1, j)), ((i, j + 1), (i, j + 1), (i + 1, j + 1))):
+                if (ni, nj) not in full:
+                    faces.append(bm.faces.new([vs[a + (-1,)], vs[b + (-1,)], vs[b + (1,)], vs[a + (1,)]]))
+        self._tag(faces=faces, mat=mat)
+
     def cyl(self, r, depth, loc, mat, r2=None, rot=(0, 0, 0), segs=48, caps=True, pre=None):
         m = mat4(loc, rot)
         if pre is not None:

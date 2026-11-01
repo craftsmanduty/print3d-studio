@@ -17,6 +17,8 @@ class P3D_PT_main(_Base, bpy.types.Panel):
         col = self.layout.column(align=True)
         col.prop(s, "quick_preset", text="")
         col.prop(s, "quick_decor")
+        col.prop(s, "surface_snap", icon='SNAP_ON' if s.surface_snap else 'SNAP_OFF')
+        col.prop(s, "carry_items", icon='LINKED')
         row = self.layout.row()
         row.scale_y = 1.6
         row.operator("p3d.quick_scene", icon='SCENE')
@@ -154,6 +156,7 @@ class P3D_PT_furniture(_Base, bpy.types.Panel):
         row.prop(s, "asset_item", text="")
         row.operator("p3d.asset_refresh", text="", icon='FILE_REFRESH')
         box.operator("p3d.asset_append", icon='IMPORT')
+        box.operator("p3d.asset_import", text="Import Asset Zips...", icon='FILE_ARCHIVE')
         row = box.row(align=True)
         row.prop(s, "asset_name", text="")
         row.operator("p3d.asset_save", text="Save", icon='EXPORT')
@@ -170,9 +173,11 @@ class P3D_PT_light(_Base, bpy.types.Panel):
         col = lay.column(align=True)
         col.prop(s, "light_preset", text="")
         col.prop(s, "light_strength")
-        if s.light_preset in ('WINDOW_DAY', 'GOLDEN'):
+        if s.light_preset in ('WINDOW_DAY', 'GOLDEN', 'CINEMATIC'):
             col.prop(s, "sun_elev")
             col.prop(s, "sun_azim")
+        if s.light_preset == 'CINEMATIC':
+            col.prop(s, "light_haze")
         if s.light_preset == 'HDRI':
             col.prop(s, "hdri_path", text="")
             col.prop(s, "hdri_strength")
@@ -192,6 +197,66 @@ class P3D_PT_light(_Base, bpy.types.Panel):
         lay.operator("p3d.camera", icon='OUTLINER_OB_CAMERA')
 
 
+def _drive(lay, s, key, text, icon):
+    lay.prop_enum(s, "cam_drive", key, text=text, icon=icon)
+
+
+class P3D_PT_cam_controls(_Base, bpy.types.Panel):
+    bl_label = "Camera Controls"
+    bl_parent_id = "P3D_PT_main"
+
+    def draw(self, context):
+        s = context.scene.p3d
+        lay = self.layout
+        cam = context.scene.camera
+        if cam is None:
+            lay.label(text="No camera yet: use One-Click Scene", icon='INFO')
+            return
+        rv3d = context.space_data.region_3d if context.space_data.type == 'VIEW_3D' else None
+        if rv3d is None or rv3d.view_perspective != 'CAMERA':
+            lay.operator("view3d.view_camera", text="Look Through Camera", icon='CAMERA_DATA')
+            return
+
+        row = lay.row(align=True)
+        row.scale_y = 1.3
+        row.operator("p3d.pick_focus", icon='EYEDROPPER')
+        if cam.type == 'CAMERA' and cam.data.dof.focus_object is not None:
+            row.operator("p3d.clear_focus", text="", icon='X')
+        if cam.type == 'CAMERA':
+            r = lay.row(align=True)
+            r.prop(cam.data.dof, "use_dof", text="Bokeh")
+            r.prop(cam.data.dof, "aperture_fstop", text="f/")
+
+        lay.label(text="Move  (hold for steady motion)", icon='VIEW_PAN')
+        g = lay.grid_flow(row_major=True, columns=3, even_columns=True, align=True)
+        _drive(g, s, "MOVE_FWD", "Forward", 'TRIA_UP')
+        _drive(g, s, "MOVE_UP", "Up", 'SORT_DESC')
+        _drive(g, s, "MOVE_LEFT", "Left", 'TRIA_LEFT')
+        _drive(g, s, "MOVE_BACK", "Back", 'TRIA_DOWN')
+        _drive(g, s, "MOVE_DOWN", "Down", 'SORT_ASC')
+        _drive(g, s, "MOVE_RIGHT", "Right", 'TRIA_RIGHT')
+
+        lay.label(text="Turn in Place", icon='DRIVER_ROTATIONAL_DIFFERENCE')
+        g = lay.grid_flow(row_major=True, columns=3, even_columns=True, align=True)
+        _drive(g, s, "PAN_LEFT", "Pan Left", 'LOOP_BACK')
+        _drive(g, s, "TILT_UP", "Tilt Up", 'TRIA_UP')
+        _drive(g, s, "ROLL_LEFT", "Roll Left", 'FILE_REFRESH')
+        _drive(g, s, "PAN_RIGHT", "Pan Right", 'LOOP_FORWARDS')
+        _drive(g, s, "TILT_DOWN", "Tilt Down", 'TRIA_DOWN')
+        _drive(g, s, "ROLL_RIGHT", "Roll Right", 'FILE_REFRESH')
+
+        lay.label(text="Orbit Around Focus", icon='ORIENTATION_GIMBAL')
+        g = lay.grid_flow(row_major=True, columns=4, even_columns=True, align=True)
+        _drive(g, s, "ORBIT_LEFT", "", 'TRIA_LEFT')
+        _drive(g, s, "ORBIT_UP", "", 'TRIA_UP')
+        _drive(g, s, "ORBIT_DOWN", "", 'TRIA_DOWN')
+        _drive(g, s, "ORBIT_RIGHT", "", 'TRIA_RIGHT')
+
+        col = lay.column(align=True)
+        col.prop(s, "cam_step_move")
+        col.prop(s, "cam_step_turn")
+
+
 class P3D_PT_render(_Base, bpy.types.Panel):
     bl_label = "Render"
     bl_parent_id = "P3D_PT_main"
@@ -205,6 +270,7 @@ class P3D_PT_render(_Base, bpy.types.Panel):
         col.prop(s, "res_preset", text="Size")
         col.prop(s, "use_gpu")
         col.prop(s, "photo_fx")
+        col.prop(s, "hide_render_sync")
         lay.operator("p3d.render_setup", icon='SETTINGS')
         row = lay.row()
         row.scale_y = 1.5
@@ -240,7 +306,7 @@ class P3D_PT_palette(_Base, bpy.types.Panel):
         row.operator("p3d.open_user_dir", icon='FILE_FOLDER', text="Folder")
 
 
-classes = (P3D_PT_main, P3D_PT_print, P3D_PT_materials, P3D_PT_room, P3D_PT_furniture,
+classes = (P3D_PT_main, P3D_PT_cam_controls, P3D_PT_print, P3D_PT_materials, P3D_PT_room, P3D_PT_furniture,
            P3D_PT_light, P3D_PT_render, P3D_PT_palette)
 
 

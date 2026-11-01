@@ -138,26 +138,71 @@ def setup(context, s):
                aim=target, size=d * 1.2, color=utils.kelvin_to_linear(5600))
         _light(coll, "Rim_Light", 'AREA', 9 * pw * k, target + Vector((0.4, 1.0, 0.8)).normalized() * d,
                aim=target, size=(d * 0.25, d * 0.9), color=utils.kelvin_to_linear(6000))
-    elif preset in ('WINDOW_DAY', 'GOLDEN'):
+    elif preset in ('WINDOW_DAY', 'GOLDEN', 'CINEMATIC'):
+        sky = 0.35
         if preset == 'GOLDEN':
             elev = math.radians(min(s.sun_elev, 10.0))
             col, sun_e = utils.kelvin_to_linear(3300), 3.2 * k
+        elif preset == 'CINEMATIC':
+            # a low, strong, warm sun and little sky light: bright patches on the floor and
+            # the desk, the rest of the room falls off into shadow, like interior photography
+            elev = math.radians(min(s.sun_elev, 18.0))
+            col, sun_e, sky = utils.kelvin_to_linear(3700), 9.0 * k, 0.15
         else:
             col, sun_e = utils.kelvin_to_linear(5600), 4.5 * k
         tdir = _sun_direction(elev, azim)
         sun = _light(coll, "Sun", 'SUN', sun_e, target - tdir * 5, direction=tdir, color=col)
-        sun.data.angle = math.radians(1.2)
+        sun.data.angle = math.radians(0.6 if preset == 'CINEMATIC' else 1.2)
         sky_rot = math.atan2(-tdir.x, -tdir.y)
-        _sky_world(scene, elev, sky_rot, 0.35 * k)
+        _sky_world(scene, elev, sky_rot, sky * k)
         _portal(coll)
+        if preset == 'CINEMATIC' and s.light_haze:
+            _haze(coll, s)
     elif preset == 'EVENING':
         _flat_world(scene, (0.02, 0.03, 0.06), 0.6 * k)
         _light(coll, "Ceiling_Light", 'AREA', 22 * k, target + Vector((0.3, -0.2, 1.4)), aim=target, size=0.5,
                color=utils.kelvin_to_linear(3200))
-        _light(coll, "Warm_Side_Light", 'POINT', 10 * k, target + Vector((-0.6, 0.3, 0.45)), size=0.08,
-               color=utils.kelvin_to_linear(3000))
+        if not any(o.type == 'LIGHT' and "p3d_lamp" in o for o in scene.objects):
+            # no desk lamp prop: a stand-in warm light where a lamp would be
+            _light(coll, "Warm_Side_Light", 'POINT', 10 * k, target + Vector((-0.6, 0.3, 0.45)), size=0.08,
+                   color=utils.kelvin_to_linear(3000))
     elif preset == 'HDRI':
         path = bpy.path.abspath(s.hdri_path)
         if not path or not os.path.isfile(path):
             raise FileNotFoundError("HDRI file not found")
         _hdri_world(scene, path, s.hdri_strength * k, math.radians(s.hdri_rot))
+    _desk_lamps(scene, preset == 'EVENING', k)
+
+
+def _desk_lamps(scene, on, k):
+    """Lamps among the props (desk lamp) shine only in the evening preset."""
+    for ob in scene.objects:
+        if ob.type == 'LIGHT' and "p3d_lamp" in ob:
+            ob.data.energy = ob["p3d_lamp"] * k if on else 0.0
+            ob.hide_render = not on
+
+
+def _haze(coll, s):
+    """A faint volume filling the room: sun beams through the window become visible."""
+    if room.find_window() is None:
+        return
+    W, D, H = s.room_w, s.room_d, s.room_h
+    me = bpy.data.meshes.new("P3D_Haze")
+    v = [(x * (W / 2 - 0.01), y * (D / 2 - 0.01), z) for x in (-1, 1) for y in (-1, 1) for z in (0.005, H - 0.01)]
+    f = [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]
+    me.from_pydata(v, [], f)
+    ob = bpy.data.objects.new("P3D_Haze", me)
+    coll.objects.link(ob)
+    ob.hide_select = True
+    ob.display_type = 'BOUNDS'
+    mat = bpy.data.materials.get("P3D_Haze") or bpy.data.materials.new("P3D_Haze")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new('ShaderNodeOutputMaterial')
+    vol = nt.nodes.new('ShaderNodeVolumePrincipled')
+    vol.inputs['Density'].default_value = 0.012
+    vol.inputs['Anisotropy'].default_value = 0.65            # light scatters forward, beams glow
+    vol.inputs['Color'].default_value = (1.0, 0.97, 0.93, 1.0)
+    nt.links.new(vol.outputs[0], out.inputs['Volume'])
+    me.materials.append(mat)

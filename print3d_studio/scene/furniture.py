@@ -11,8 +11,8 @@ import bpy
 from mathutils import Matrix, Vector
 
 from .. import utils
-from ..materials import filament, surfaces
-from .. import palette
+from ..materials import surfaces
+from .. import library
 from .mesh import MB, mat4
 
 COLLECTION = "P3D_Props"
@@ -63,7 +63,12 @@ def add(iid, context, location=None, rotation_z=0.0, seed=None):
     root.rotation_euler.z = rotation_z
     root["p3d_item"] = iid
     rng = random.Random(seed)
-    spec[3](coll, root, rng)
+    try:
+        spec[3](coll, root, rng)
+    except library.MissingAsset as e:
+        bpy.data.objects.remove(root)
+        print("[3D Print Studio]", e)
+        return None
     return root
 
 
@@ -160,44 +165,175 @@ def books(coll, root, rng):
     root["p3d_surface"] = z
 
 
-@item("lamp", "Desk Lamp", 'LIGHT')
-def lamp(coll, root, rng):
-    mb = MB()
-    blk = M('metal_black')
-    mb.cyl(0.07, 0.02, (0, 0, 0.01), blk, segs=64)
-    mb.cyl(0.008, 0.38, (0, 0, 0.21), blk, segs=24)
-    mb.cyl(0.007, 0.24, (0, -0.12, 0.395), blk, rot=(math.pi / 2, 0, 0), segs=24)
-    mb.lathe([(0.012, 0.0), (0.075, -0.11), (0.073, -0.11), (0.011, 0.0)], (0, -0.24, 0.395), blk, closed=True)
-    mb.sphere(0.022, (0, -0.24, 0.345), M('bulb'))
-    mb.to_object("Desk_Lamp", coll, root, bevel=0.001)
-    ld = bpy.data.lights.new("P3D_Lamp_Light", 'SPOT')
-    ld.energy = 12.0
-    ld.spot_size = math.radians(115)
+def _ground(objs, root):
+    """Moves the appended objects so the lowest point of their meshes is at the root."""
+    bpy.context.view_layer.update()
+    pts = [o.matrix_world @ Vector(c) for o in objs if o.type == 'MESH' for c in o.bound_box]
+    if not pts:
+        return
+    dz = min(p.z for p in pts) - root.matrix_world.translation.z
+    for o in objs:
+        if o.parent == root:
+            o.location.z -= dz
+
+
+def _library(name, surface=None, ground=True):
+    def build(coll, root, rng):
+        objs = library.append_model(name, coll, root)
+        if ground:
+            _ground(objs, root)
+        if surface is not None:
+            root["p3d_surface"] = surface
+    return build
+
+
+# CC0 models from Poly Haven, shipped with the add-on (assets/models)
+for _iid, _label, _icon, _name, _surface in (
+        ("plant", "Potted Plant (Desk)", 'OUTLINER_OB_FORCE_FIELD', "potted_plant_04", None),
+        ("plant_floor", "Potted Plant (Floor)", 'OUTLINER_OB_FORCE_FIELD', "potted_plant_02", None),
+        ("chair_green", "Green Armchair (Floor)", 'MESH_CUBE', "GreenChair_01", None),
+        ("chair_dining", "Dining Chair (Floor)", 'MESH_CUBE', "dining_chair_02", None),
+        ("wooden_table", "Wooden Table (Low)", 'MESH_PLANE', "WoodenTable_01", 0.549),
+        ("coffee_table_modern", "Modern Coffee Table", 'MESH_CYLINDER', "modern_coffee_table_02", 0.369),
+        ("display_shelves", "Display Shelves", 'MENU_PANEL', "wooden_display_shelves_01", None),
+        ("chess", "Chess Set", 'MESH_GRID', "chess_set", None),
+        ("stapler", "Vintage Stapler", 'MESH_CUBE', "vintage_stapler", None),
+        ("lighter", "Vintage Lighter", 'MESH_CUBE', "vintage_lighter", None),
+        ("street_lamp", "Street Lamp (Outdoor)", 'LIGHT', "street_lamp_01", None)):
+    item(_iid, _label, _icon)(_library(_name, _surface))
+
+# hangs on a wall: the back plate is at the root, the arm reaches out along -Y
+item("wall_lantern", "Wall Lantern", 'LIGHT')(_library("street_lamp_02", ground=False))
+
+LAMP_W = 60.0       # W of the spot light in the desk lamp (Blender watts of a ~800 lm bulb)
+
+
+@item("desk_lamp", "Desk Lamp (Arm)", 'LIGHT_SPOT')
+def desk_lamp(coll, root, rng):
+    objs = library.append_model("desk_lamp_arm_01", coll, root)
+    # the cables are curves hooked to helper empties; once the lamp is moved off the origin
+    # they stretch up to the ceiling, so they are left out
+    for o in [o for o in objs if "wire" in o.name]:
+        objs.remove(o)
+        bpy.data.objects.remove(o)
+    rig = next((o for o in objs if o.type == 'ARMATURE'), None)
+    if rig is not None:
+        # pose: the arm reaches about 30 cm out (along the root's -X/-Y diagonal) and the
+        # shade looks straight down onto the desk
+        pb = rig.pose.bones
+        for n in ("ctrl_top_rotation_A", "ctrl_top_rotation_B"):
+            if n in pb:
+                pb[n].rotation_euler = (0.0, 0.0, 0.0)
+        if "ctrl_top-position" in pb:
+            pb["ctrl_top-position"].location = (-0.05, 0.15, 0.0)
+    _ground(objs, root)
+    head = next((o for o in objs if o.name.startswith("geo_lamp-head") and "button" not in o.name), None)
+    if head is None:
+        return
+    import numpy as np
+    bpy.context.view_layer.update()
+    # the shade is a cone: its long axis is the main direction of its vertices, and the open
+    # end is the one with the wide rim
+    ev = head.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    me = ev.to_mesh()
+    P = np.array([(head.matrix_world @ v.co)[:] for v in me.vertices])
+    ev.to_mesh_clear()
+    c = P.mean(0)
+    axis = np.linalg.svd(P - c)[2][0]
+    t = (P - c) @ axis
+
+    def rim(sel):
+        q = (P - c)[sel]
+        return np.linalg.norm(q - np.outer(q @ axis, axis), axis=1).mean()
+    if rim(t < t.min() + 0.01) > rim(t > t.max() - 0.01):
+        axis, t = -axis, -t
+    c, axis, mouth = Vector(c), Vector(axis), float(t.max())
+    ld = bpy.data.lights.new("Desk_Lamp_Bulb", 'SPOT')
+    ld.energy = LAMP_W
+    ld.color = utils.kelvin_to_linear(2700)
+    ld.spot_size = math.radians(110)
     ld.spot_blend = 0.6
-    ld.shadow_soft_size = 0.02
-    ld.color = utils.kelvin_to_linear(2800)
-    lo = bpy.data.objects.new("P3D_Lamp_Light", ld)
-    coll.objects.link(lo)
-    lo.parent = root
-    lo.location = (0, -0.24, 0.33)
+    ld.shadow_soft_size = 0.025
+    light = bpy.data.objects.new("Desk_Lamp_Bulb", ld)
+    coll.objects.link(light)
+    light.location = c + axis * (mouth - 0.02)     # just inside the rim, in front of the bulb
+    light.rotation_euler = axis.to_track_quat('-Z', 'Y').to_euler()
+    light.parent = head
+    light.matrix_parent_inverse = head.matrix_world.inverted()
+    light["p3d_lamp"] = LAMP_W          # switched on by the evening lighting, off in daylight
 
 
-@item("plant", "Potted Succulent", 'OUTLINER_OB_FORCE_FIELD')
-def plant(coll, root, rng):
-    mb = MB()
-    mb.lathe([(0.0, 0.0), (0.07, 0.0), (0.09, 0.16), (0.083, 0.16), (0.065, 0.012), (0.0, 0.012)],
-             (0, 0, 0), M('terracotta'))
-    mb.cyl(0.082, 0.01, (0, 0, 0.145), M('soil'), segs=48)
-    leafm = M('succulent')
-    for k, (count, elev, size) in enumerate([(5, 72, 0.8), (7, 52, 1.0), (9, 32, 1.15), (11, 15, 1.25)]):
-        for i in range(count):
-            a = 2 * math.pi * i / count + k * 0.4 + rng.uniform(-0.1, 0.1)
-            e = math.radians(elev + rng.uniform(-6, 6))
-            ln = 0.05 * size
-            dvec = Vector((-math.sin(a) * math.cos(e), math.cos(a) * math.cos(e), math.sin(e)))
-            mb.sphere(1.0, Vector((0, 0, 0.152)) + dvec * ln * 0.85, leafm,
-                      scale=(0.017 * size, ln, 0.009 * size), rot=(e, 0, a), segs=16, rings=10)
-    mb.to_object("Succulent", coll, root, bevel=0.0)
+BOOKS = "decorative_book_set_01"
+
+
+def _local_bounds(o):
+    co = [Vector(c) for c in o.bound_box]
+    return (Vector((min(c.x for c in co), min(c.y for c in co), min(c.z for c in co))),
+            Vector((max(c.x for c in co), max(c.y for c in co), max(c.z for c in co))))
+
+
+def _scanned_books(coll, root, rng, n, kinds=("book_",)):
+    names = [x for x in library.object_names(BOOKS) if x.startswith(kinds)]
+    rng.shuffle(names)
+    objs = library.append_objects(BOOKS, names[:n], coll, root)
+    for o in objs:
+        o.rotation_euler = (0.0, 0.0, 0.0)
+    return objs
+
+
+def _book_row(coll, root, rng, n):
+    """Upright books side by side, spines in line at the front, centered on the root."""
+    objs = _scanned_books(coll, root, rng, n, ("book_", "catalogue_"))
+    x = 0.0
+    for o in objs:
+        mn, mx = _local_bounds(o)
+        o.location = (x - mn.x, -mn.y - 0.1, -mn.z)
+        x += mx.x - mn.x + 0.001
+    for o in objs:
+        o.location.x -= x / 2
+
+
+@item("book_row", "Book Row (Scanned)", 'BOOKMARKS')
+def book_row(coll, root, rng):
+    _book_row(coll, root, rng, rng.randint(7, 12))
+
+
+@item("books_few", "Book Row, Short (Scanned)", 'BOOKMARKS')
+def books_few(coll, root, rng):
+    _book_row(coll, root, rng, rng.randint(4, 6))
+
+
+@item("book_stack_scanned", "Book Stack (Scanned)", 'BOOKMARKS')
+def book_stack_scanned(coll, root, rng):
+    """Books lying flat, biggest at the bottom, each turned a little."""
+    objs = _scanned_books(coll, root, rng, rng.randint(3, 5))
+    objs.sort(key=lambda o: -o.dimensions.y * o.dimensions.z)
+    z = 0.0
+    for o in objs:
+        mn, mx = _local_bounds(o)
+        rot = Matrix.Rotation(rng.uniform(-0.2, 0.2), 4, 'Z') @ Matrix.Rotation(math.pi / 2, 4, 'Y')
+        corners = [rot @ Vector((x, y, zz)) for x in (mn.x, mx.x) for y in (mn.y, mx.y) for zz in (mn.z, mx.z)]
+        lo = Vector((min(c.x for c in corners), min(c.y for c in corners), min(c.z for c in corners)))
+        hi = Vector((max(c.x for c in corners), max(c.y for c in corners), max(c.z for c in corners)))
+        o.matrix_basis = Matrix.Translation(Vector((rng.uniform(-0.01, 0.01) - (lo.x + hi.x) / 2,
+                                                    rng.uniform(-0.01, 0.01) - (lo.y + hi.y) / 2,
+                                                    z - lo.z))) @ rot
+        z += hi.z - lo.z
+    root["p3d_surface"] = z
+
+
+@item("postcards", "Postcards", 'IMAGE_DATA')
+def postcards(coll, root, rng):
+    """A few postcards lying loosely on top of each other."""
+    names = ["postcard_%02d" % i for i in rng.sample(range(1, 21), rng.randint(2, 4))]
+    objs = library.append_objects("postcard_set_01", names, coll, root)
+    for i, o in enumerate(objs):
+        mn, mx = _local_bounds(o)
+        rot = Matrix.Rotation(rng.uniform(-0.6, 0.6), 4, 'Z') @ Matrix.Rotation(-math.pi / 2, 4, 'X')
+        c = rot @ ((mn + mx) / 2)
+        o.matrix_basis = Matrix.Translation(Vector((rng.uniform(-0.04, 0.04) - c.x,
+                                                    rng.uniform(-0.03, 0.03) - c.y,
+                                                    0.0004 * (i + 1) - c.z))) @ rot
 
 
 @item("mug", "Mug", 'MOD_SOLIDIFY')
@@ -240,34 +376,6 @@ def pei_plate(coll, root, rng):
     mb.box((0.257, 0.257, 0.0015), (0, 0, 0.00075), M('pei_textured'))
     mb.to_object("PEI_Plate", coll, root, bevel=0.0005)
     root["p3d_surface"] = 0.0015
-
-
-@item("spool", "Filament Spool", 'MESH_TORUS')
-def spool(coll, root, rng, type_key="PLA_SILK", color_id="c0"):
-    holder = bpy.data.objects.new("Spool_Pivot", None)
-    holder.empty_display_size = 0.05
-    coll.objects.link(holder)
-    holder.parent = root
-    holder.location = (0, 0, 0.1)
-    holder.rotation_euler = (math.pi / 2, 0, 0)
-
-    mb = MB()
-    blk = M('plastic_black')
-    for z in (0.0, 0.066):
-        mb.lathe([(0.027, z), (0.1, z), (0.1, z + 0.004), (0.027, z + 0.004)], (0, 0, -0.035), blk, closed=True, segs=96)
-    mb.lathe([(0.05, 0.004), (0.027, 0.004), (0.027, 0.066), (0.05, 0.066)], (0, 0, -0.035), blk, closed=True)
-    mb.to_object("Spool", coll, holder, bevel=0.0)
-
-    mb = MB()
-    tmp = bpy.data.materials.new("P3D_Spool_Filament")
-    mb.lathe([(0.05, 0.004), (0.088, 0.004), (0.088, 0.066), (0.05, 0.066)], (0, 0, -0.035), tmp, closed=True, segs=96)
-    fob = mb.to_object("Spool_Filament", coll, holder, bevel=0.0)
-
-    tdef = palette.get_type(type_key)
-    colors = palette.colors_linear(palette.get_color_entry(type_key, color_id))
-    cfg = filament.make_cfg(fob, bpy.context.scene, Vector((0, 0, 1)), 1.75, 1.75,
-                            strength=1.3, variation=0.2, seam='NONE', top_lines=False)
-    filament.build(tmp, tdef, colors[:1], cfg)
 
 
 @item("laptop", "Laptop", 'DESKTOP')

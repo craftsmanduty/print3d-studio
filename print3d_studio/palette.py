@@ -14,7 +14,8 @@ _DIR = os.path.dirname(os.path.abspath(__file__))
 DATA = {"types": {}, "materials": {}, "mat_order": [], "categories": []}
 
 # Lists returned by EnumProperty callbacks must be kept alive.
-_ENUM = {"types": [], "colors": {}, "cats": [], "mats_by_cat": {}, "all_mats": [], "mat_index": {}}
+_ENUM = {"types": [], "colors": {}, "cats": [], "mats_by_cat": {}, "all_mats": [], "mat_index": {},
+         "room": {}}
 _EMPTY = [("NONE", "-", "", 0)]
 
 
@@ -92,6 +93,33 @@ def _rebuild_enums():
         (mid, "%s > %s" % (DATA["materials"][mid].get("category", ""), DATA["materials"][mid]["name"]), "", i)
         for i, mid in enumerate(DATA["mat_order"])
     ]
+    _ENUM["room"] = {role: _room_items(role) for role in ("wall", "floor")}
+
+
+def is_external(m):
+    """True for a material whose maps come from the local asset library (downloaded,
+    usually licensed) rather than from textures that ship with the add-on."""
+    lib = m.get("params", {}).get("lib")
+    return bool(lib) and not os.path.isdir(os.path.join(_DIR, "assets", "textures", lib))
+
+
+_ROOM_CATS = ("Walls & Floors", "Stone & Concrete", "Wood")
+
+
+def _room_items(role):
+    """Wall or floor choices: the add-on's own materials for that role, then the library
+    textures under their own heading."""
+    own, ext = [], []
+    for i, mid in enumerate(DATA["mat_order"]):
+        m = DATA["materials"][mid]
+        if is_external(m):
+            if m.get("category") in _ROOM_CATS:
+                ext.append((mid, m["name"], "", i))
+        elif m.get("room") == role:
+            own.append((mid, m["name"], "", i))
+    if ext:
+        own += [("", "Asset Library (local only)", "")] + ext
+    return own
 
 
 # --- queries ---------------------------------------------------------------
@@ -144,6 +172,14 @@ def enum_mats_in_cat(self, context):
 
 def enum_all_mats(self, context):
     return _ENUM["all_mats"] or _EMPTY
+
+
+def enum_wall_mats(self, context):
+    return _ENUM["room"].get("wall") or _EMPTY
+
+
+def enum_floor_mats(self, context):
+    return _ENUM["room"].get("floor") or _EMPTY
 
 
 # --- user additions -------------------------------------------------------

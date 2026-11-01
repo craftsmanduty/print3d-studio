@@ -12,36 +12,34 @@ COLLECTION = "P3D_Room"
 
 
 def _wall(mb, along, fixed, u0, u1, H, T, mat, hole=None):
-    def piece(a, b, z0, z1):
-        if b - a <= 1e-4 or z1 - z0 <= 1e-4:
-            return
-        c = (a + b) / 2
-        if along == 'X':
-            mb.box((b - a, T, z1 - z0), (c, fixed, (z0 + z1) / 2), mat)
-        else:
-            mb.box((T, b - a, z1 - z0), (fixed, c, (z0 + z1) / 2), mat)
-
     if hole is None:
-        piece(u0, u1, 0.0, H)
+        mb.slab(along, fixed, [u0, u1], [0.0, H], T, mat)
         return
     uc, w, sill, h = hole
-    piece(u0, uc - w / 2, 0.0, H)
-    piece(uc + w / 2, u1, 0.0, H)
-    piece(uc - w / 2, uc + w / 2, 0.0, sill)
-    piece(uc - w / 2, uc + w / 2, sill + h, H)
+    a, b = max(uc - w / 2, u0), min(uc + w / 2, u1)
+    top = min(sill + h, H)
+    us = sorted({u0, a, b, u1})
+    zs = sorted({0.0, sill, top, H})
+    mb.slab(along, fixed, us, zs, T, mat, empty=[(us.index(a), zs.index(sill))])
 
 
 def build_room(context, s):
     coll = utils.ensure_collection(COLLECTION)
+    old = tuple(coll.get("p3d_dims", ()))
     utils.clear_collection(coll)
     W, D, H, T = s.room_w, s.room_d, s.room_h, 0.12
-    wall_m = surfaces.get(s.room_wall_mat)
-    floor_m = surfaces.get(s.room_floor_mat)
+    coll["p3d_dims"] = (W, D)
+    if len(old) == 2 and (abs(old[0] - W) > 1e-6 or abs(old[1] - D) > 1e-6):
+        from . import carry
+        carry.keep_wall_gaps(context.scene, old, (W, D))
+    wall_m = surfaces.get(s.room_wall_mat, relief=True)
+    floor_m = surfaces.get(s.room_floor_mat, relief=True)
     trim = surfaces.get('paint_white')
 
     mb = MB()
     mb.box((W + 2 * T, D + 2 * T, 0.05), (0, 0, -0.025), floor_m)
     floor = mb.to_object("Floor", coll, bevel=0.0)
+    surfaces.add_relief(floor)
 
     win = s.room_window
     ww, wh, sill = s.window_w, s.window_h, s.window_sill
@@ -63,7 +61,7 @@ def build_room(context, s):
                   0.08, 0.012, trim, None)
     if s.room_ceiling:
         mb.box((W + 2 * T, D + 2 * T, 0.05), (0, 0, H + 0.025), surfaces.get('paint_white'))
-    mb.to_object("Walls", coll, bevel=0.0)
+    surfaces.add_relief(mb.to_object("Walls", coll, bevel=0.0))
 
     if win in walls:
         along, fixed, u0, u1, nrm = walls[win]

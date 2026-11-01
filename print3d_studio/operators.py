@@ -1,10 +1,12 @@
+import math
 import os
+import time
 
 import bpy
-from bpy.props import StringProperty
-from mathutils import Vector
+from bpy.props import CollectionProperty, StringProperty
+from mathutils import Matrix, Vector
 
-from . import palette, properties, utils
+from . import library, palette, properties, utils
 from .materials import filament, surfaces
 from .scene import camera, furniture, lighting, render, room
 
@@ -74,8 +76,40 @@ class P3D_OT_scale_real(bpy.types.Operator):
             o.location = o.location * f
             if o.p3d.is_print:
                 filament.apply(o, context.scene)
+            origin_to_bottom(o)
         render.setup_units(context.scene)
         return {'FINISHED'}
+
+
+def origin_to_bottom(obj):
+    """Moves the model's origin to the center of its underside without moving the model, so
+    surface snapping (Face Project) sets it down on whatever is under the cursor."""
+    meshes = {obj.data, filament.source_mesh(obj)}
+    if not obj.data.vertices:
+        return
+    co = [v.co for v in obj.data.vertices]
+    lo = Vector((min(c.x for c in co), min(c.y for c in co), min(c.z for c in co)))
+    hi = Vector((max(c.x for c in co), max(c.y for c in co), max(c.z for c in co)))
+    off = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
+    if off.length < 1e-9:
+        return
+    for me in meshes:
+        me.transform(Matrix.Translation(-off))
+        me.update()
+    obj.location += obj.matrix_basis.to_3x3() @ off
+
+
+def surface_snap(scene, enable=True):
+    """Drag (G / Move tool) objects over the surfaces under the cursor: desk, mat, floor..."""
+    ts = scene.tool_settings
+    ts.use_snap = enable
+    if enable:
+        ts.snap_elements = {'FACE_PROJECT'}
+        ts.use_snap_translate = True
+        ts.use_snap_rotate = False
+        ts.use_snap_scale = False
+        ts.use_snap_align_rotation = False
+        ts.use_snap_peel_object = False
 
 
 def drop_to_surface(context, obj):
@@ -86,7 +120,8 @@ def drop_to_surface(context, obj):
     best = None
     for fx, fy in ((0, 0), (0.3, 0.3), (-0.3, 0.3), (0.3, -0.3), (-0.3, -0.3)):
         origin = Vector((c.x + fx * (mx.x - mn.x), c.y + fy * (mx.y - mn.y), mx.z + 0.001))
-        for _ in range(16):
+        # a sliced model has a cap per layer: step through all of its own surfaces
+        for _ in range(20000):
             hit, loc, _, _, ob, _ = context.scene.ray_cast(dg, origin, Vector((0, 0, -1)))
             if not hit:
                 break
@@ -109,6 +144,7 @@ class P3D_OT_drop(bpy.types.Operator):
 
     def execute(self, context):
         for o in _meshes(context):
+            origin_to_bottom(o)
             drop_to_surface(context, o)
         return {'FINISHED'}
 
@@ -242,6 +278,7 @@ class P3D_OT_add_furniture(bpy.types.Operator):
         iid = self.item or context.scene.p3d.furniture_item
         root = furniture.add(iid, context)
         if root is None:
+            self.report({'WARNING'}, "Could not add '%s' - is its model imported into the asset library?" % iid)
             return {'CANCELLED'}
         for o in context.selected_objects:
             o.select_set(False)
@@ -268,18 +305,21 @@ class P3D_OT_asset_refresh(bpy.types.Operator):
 
     def execute(self, context):
         entries = []
-        for d in asset_dirs():
-            for fn in sorted(os.listdir(d)):
-                if not fn.lower().endswith(".blend"):
-                    continue
-                path = os.path.join(d, fn)
-                try:
-                    with bpy.data.libraries.load(path) as (src, _):
-                        names = list(src.collections)
-                except Exception as e:
-                    print("[3D Print Studio] could not read:", path, e)
-                    continue
-                entries += ["%s::%s" % (path, n) for n in names]
+        files = [os.path.join(d, fn) for d in asset_dirs() for fn in sorted(os.listdir(d))
+                 if fn.lower().endswith(".blend")]
+        lib_files = set(library.model_files())
+        for path in files + sorted(lib_files):
+            try:
+                with bpy.data.libraries.load(path) as (src, _):
+                    names = list(src.collections)
+            except Exception as e:
+                print("[3D Print Studio] could not read:", path, e)
+                continue
+            if path in lib_files and names:
+                # downloaded models: one entry, the collection named like the asset if any
+                stem = os.path.basename(os.path.dirname(path))
+                names = [next((n for n in names if n == stem), names[-1])]
+            entries += ["%s::%s" % (path, n) for n in names]
         properties.set_assets(entries)
         self.report({'INFO'}, "%d assets found" % len(entries))
         return {'FINISHED'}
@@ -299,6 +339,7 @@ class P3D_OT_asset_append(bpy.types.Operator):
         path, name = key.rsplit("::", 1)
         with bpy.data.libraries.load(path, link=False) as (src, dst):
             dst.collections = [name]
+        library.fix_missing_images(bpy.data.images)
         cur = context.scene.cursor.location
         target = utils.ensure_collection(furniture.COLLECTION)
         for coll in dst.collections:
@@ -308,6 +349,40 @@ class P3D_OT_asset_append(bpy.types.Operator):
             for o in coll.all_objects:
                 if o.parent is None:
                     o.location += cur
+        return {'FINISHED'}
+
+
+class P3D_OT_asset_import(bpy.types.Operator):
+    """Import downloaded asset zips (Poliigon / ambientCG style): models go to the asset
+    library, textures become materials in the Material Library"""
+    bl_idname = "p3d.asset_import"
+    bl_label = "Import Asset Zips"
+
+    directory: StringProperty(subtype='DIR_PATH')
+    files: CollectionProperty(type=bpy.types.OperatorFileListElement)
+    filter_glob: StringProperty(default="*.zip", options={'HIDDEN'})
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        from . import textures
+        want = int(textures.resolution().rstrip("kK") or 4)
+        done = {"model": 0, "texture": 0}
+        for f in self.files:
+            path = os.path.join(self.directory, f.name)
+            try:
+                name, kind, _ = library.import_zip(path, want)
+            except Exception as e:
+                self.report({'WARNING'}, "%s: %s" % (f.name, e))
+                continue
+            done[kind] += 1
+            if kind == "texture":
+                library.register_texture(name)
+        palette.load()
+        bpy.ops.p3d.asset_refresh()
+        self.report({'INFO'}, "Imported %d models, %d textures" % (done["model"], done["texture"]))
         return {'FINISHED'}
 
 
@@ -377,6 +452,125 @@ class P3D_OT_camera(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class P3D_OT_pick_focus(bpy.types.Operator):
+    """Click a point on any object: the camera keeps that exact point in focus, even when the
+    camera or the object moves"""
+    bl_idname = "p3d.pick_focus"
+    bl_label = "Pick Focus Point"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.area is not None and context.area.type == 'VIEW_3D' and context.scene.camera
+
+    def invoke(self, context, event):
+        context.window.cursor_modal_set('EYEDROPPER')
+        context.area.header_text_set("Click the point to focus on  -  Esc / right click: cancel")
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    def _end(self, context):
+        context.window.cursor_modal_restore()
+        context.area.header_text_set(None)
+
+    def modal(self, context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            self._end(context)
+            return {'CANCELLED'}
+        if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
+            region = next((r for r in context.area.regions if r.type == 'WINDOW'), None)
+            x, y = event.mouse_x - region.x, event.mouse_y - region.y
+            if not (0 <= x < region.width and 0 <= y < region.height):
+                return {'RUNNING_MODAL'}
+            hit = camera.focus_at_pixel(context, region, region.data, (x, y))
+            self._end(context)
+            if hit is None:
+                self.report({'WARNING'}, "Nothing under the cursor")
+                return {'CANCELLED'}
+            context.scene.p3d.use_dof = True
+            self.report({'INFO'}, "Focus on %s (%.1f cm from the camera)" % hit)
+            return {'FINISHED'}
+        return {'RUNNING_MODAL'}
+
+
+class P3D_OT_clear_focus(bpy.types.Operator):
+    """Remove the picked focus point (focus goes back to the model's center)"""
+    bl_idname = "p3d.clear_focus"
+    bl_label = "Clear Focus Point"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        camera.clear_focus(context.scene)
+        return {'FINISHED'}
+
+
+class P3D_OT_cam_nudge(bpy.types.Operator):
+    """Move or turn the camera one step (steps are set below the buttons)"""
+    bl_idname = "p3d.cam_nudge"
+    bl_label = "Nudge Camera"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    mode: bpy.props.EnumProperty(items=[('MOVE', "Move", ""), ('TURN', "Turn", ""), ('ORBIT', "Orbit", "")])
+    axis: bpy.props.IntProperty(min=0, max=2)
+    sign: bpy.props.IntProperty(default=1, min=-1, max=1)
+
+    @classmethod
+    def poll(cls, context):
+        return context.scene.camera is not None
+
+    def execute(self, context):
+        s = context.scene.p3d
+        step = s.cam_step_move if self.mode == 'MOVE' else math.radians(s.cam_step_turn)
+        camera.nudge(context.scene, self.mode, self.axis, self.sign * step)
+        return {'FINISHED'}
+
+
+class P3D_OT_cam_drive(bpy.types.Operator):
+    """Held camera button: one step at once, then after a short pause the camera keeps
+    moving at a constant speed until the mouse button is released"""
+    bl_idname = "p3d.cam_drive"
+    bl_label = "Drive Camera"
+    bl_options = {'UNDO', 'INTERNAL'}
+
+    HOLD_DELAY = 0.3                                          # s before the steady motion
+    RATE = 10.0                                               # steps per second while held
+
+    def invoke(self, context, event):
+        s = context.scene.p3d
+        if context.scene.camera is None or s.cam_drive not in camera.DRIVES:
+            s.cam_drive = 'NONE'
+            return {'CANCELLED'}
+        self.mode, self.axis, self.sign = camera.DRIVES[s.cam_drive]
+        self._step(context, 1.0)
+        self._t0 = self._last = time.monotonic()
+        wm = context.window_manager
+        self._timer = wm.event_timer_add(1 / 60, window=context.window)
+        wm.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    def _step(self, context, n):
+        s = context.scene.p3d
+        step = s.cam_step_move if self.mode == 'MOVE' else math.radians(s.cam_step_turn)
+        camera.nudge(context.scene, self.mode, self.axis, self.sign * step * n)
+        for a in context.screen.areas if context.screen else ():
+            if a.type == 'VIEW_3D':
+                a.tag_redraw()
+
+    def modal(self, context, event):
+        now = time.monotonic()
+        if event.type == 'TIMER':
+            if now - self._t0 > self.HOLD_DELAY:
+                self._step(context, (now - self._last) * self.RATE)
+            self._last = now
+            return {'PASS_THROUGH'}
+        if ((event.type == 'LEFTMOUSE' and event.value == 'RELEASE')
+                or event.type in {'ESC', 'RIGHTMOUSE', 'WINDOW_DEACTIVATE'} or now - self._t0 > 120):
+            context.window_manager.event_timer_remove(self._timer)
+            context.scene.p3d.cam_drive = 'NONE'
+            return {'FINISHED'}
+        return {'PASS_THROUGH'}
+
+
 class P3D_OT_render_setup(bpy.types.Operator):
     """Apply photorealistic Cycles render settings"""
     bl_idname = "p3d.render_setup"
@@ -422,6 +616,9 @@ class P3D_OT_quick_scene(bpy.types.Operator):
         if not obj.p3d.is_print:
             obj.p3d.is_print = True
         filament.apply(obj, scene)
+        origin_to_bottom(obj)
+        if s.surface_snap:
+            surface_snap(scene)
 
         if s.quick_preset == 'STUDIO':
             room.build_cove(context, s)
@@ -444,8 +641,11 @@ class P3D_OT_quick_scene(bpy.types.Operator):
             mn = utils.world_bounds(obj)[0]
             obj.location += Vector((top.x - c.x, top.y - c.y, top.z + 0.05 - mn.z))
             drop_to_surface(context, obj)
-            s.light_preset = {'DESK_DAY': 'WINDOW_DAY', 'DESK_GOLDEN': 'GOLDEN',
-                              'DESK_EVENING': 'EVENING'}[s.quick_preset]
+            if s.quick_preset == 'DESK_CINEMATIC':
+                # low, close to the desk, wide open: the lamp, plant and books behind melt into bokeh
+                s.cam_elev, s.cam_margin, s.cam_fstop = 10.0, 1.9, 2.8
+            s.light_preset = {'DESK_CINEMATIC': 'CINEMATIC', 'DESK_DAY': 'WINDOW_DAY',
+                              'DESK_GOLDEN': 'GOLDEN', 'DESK_EVENING': 'EVENING'}[s.quick_preset]
 
         for o in context.selected_objects:
             o.select_set(False)
@@ -465,13 +665,76 @@ class P3D_OT_quick_scene(bpy.types.Operator):
 
     @staticmethod
     def _decor(context, desk):
+        s = context.scene.p3d
+        add = furniture.add
         base = desk.location + Vector((0, 0, furniture.DESK_TOP))
-        furniture.add("cutting_mat", context, location=base + Vector((0.0, -0.08, 0.0)))
-        furniture.add("plant", context, location=base + Vector((0.5, 0.17, 0.0)), seed=3)
-        furniture.add("lamp", context, location=base + Vector((-0.55, 0.2, 0.0)), rotation_z=0.5)
-        furniture.add("spool", context, location=base + Vector((-0.36, 0.18, 0.0)), rotation_z=0.35)
-        furniture.add("books", context, location=base + Vector((0.42, -0.12, 0.0)), rotation_z=0.2, seed=7)
-        furniture.add("mug", context, location=base + Vector((0.33, 0.12, 0.0)), rotation_z=2.2, seed=1)
+        # on the desk, around the mat the model stands on
+        add("cutting_mat", context, location=base + Vector((0.0, -0.08, 0.0)))
+        add("desk_lamp", context, location=base + Vector((-0.52, 0.14, 0.0)), rotation_z=2.36)
+        add("plant", context, location=base + Vector((0.55, 0.2, 0.0)), rotation_z=0.8)
+        add("book_stack_scanned", context, location=base + Vector((0.42, -0.14, 0.0)), rotation_z=0.2, seed=7)
+        add("mug", context, location=base + Vector((0.3, 0.14, 0.0)), rotation_z=2.2, seed=1)
+        add("postcards", context, location=base + Vector((-0.42, -0.2, 0.0)), seed=4)
+        add("stapler", context, location=base + Vector((-0.27, 0.19, 0.0)), rotation_z=0.35)
+
+        # the room around it: what the camera sees behind the desk, out of focus
+        W, D = s.room_w, s.room_d
+        back = D / 2
+        if W / 2 > 0.7 + 0.15 + 1.08 + 0.05:
+            shelves = add("display_shelves", context, location=Vector((0.7 + 0.15 + 0.54, back - 0.2, 0.0)))
+            if shelves is not None:
+                _dress_shelves(context, shelves)
+        if W / 2 > 0.7 + 0.8:
+            add("plant_floor", context, location=Vector((-W / 2 + 0.45, back - 0.4, 0.0)), rotation_z=0.6)
+        if W > 3.2 and D > 3.0:
+            add("chair_green", context, location=Vector((W / 2 - 0.6, -D / 2 + 1.1, 0.0)),
+                rotation_z=-math.pi / 2 - 0.5)
+            table = add("coffee_table", context, location=Vector((W / 2 - 1.45, -D / 2 + 0.95, 0.0)))
+            if table is not None:
+                add("chess", context, location=table.location + Vector((0, 0, table["p3d_surface"])),
+                    rotation_z=0.3)
+
+
+def _shelf_levels(context, root):
+    """(z, free height above) of every board of a shelf unit, bottom to top."""
+    context.view_layer.update()
+    dg = context.evaluated_depsgraph_get()
+    obs = [o for o in root.children_recursive if o.type == 'MESH']
+    pts = [o.matrix_world @ Vector(c) for o in obs for c in o.bound_box]
+    if not pts:
+        return []
+    top = max(p.z for p in pts)
+    c = root.matrix_world.translation
+    origin, levels = Vector((c.x, c.y, top + 0.01)), []
+    for _ in range(40):
+        hit, loc, nrm, _, ob, _ = context.scene.ray_cast(dg, origin, Vector((0, 0, -1)))
+        if not hit or ob is None or ob.name not in {o.name for o in obs}:
+            break
+        if nrm.z > 0.9:
+            levels.append(loc.z)
+        origin = loc - Vector((0, 0, 0.005))
+    levels.sort()
+    return [(z, (levels[i + 1] if i + 1 < len(levels) else top + 0.3) - z) for i, z in enumerate(levels)]
+
+
+def _dress_shelves(context, shelves):
+    """Books, a small plant and a few objects on the boards of the display shelves."""
+    add = furniture.add
+    rz = shelves.rotation_euler.z
+    rot = Matrix.Rotation(rz, 3, 'Z')
+    c = shelves.matrix_world.translation
+    levels = _shelf_levels(context, shelves)
+    col = 0.36                      # the unit has three cubbies side by side
+    # (board from the bottom, cubby -1/0/1, prop, its height)
+    # (board from the bottom, cubby -1/0/1, prop, its height); boards 0 and 1 close the drawers
+    things = [(2, -1, "plant", 0.27), (2, 0, "book_stack_scanned", 0.12), (2, 1, "books_few", 0.24),
+              (3, -1, "lighter", 0.06), (3, 0, "books_few", 0.24),
+              (4, -1, "book_stack_scanned", 0.12), (4, 1, "books_few", 0.24)]
+    for lvl, cub, iid, h in things:
+        if lvl >= len(levels) or levels[lvl][1] < h + 0.02:
+            continue
+        add(iid, context, location=Vector((c.x, c.y, levels[lvl][0])) + rot @ Vector((cub * col, 0.0, 0.0)),
+            rotation_z=rz + (0.4 if iid == "lighter" else 0.0), seed=lvl * 10 + cub)
 
 
 classes = (
@@ -479,8 +742,8 @@ classes = (
     P3D_OT_apply_surface, P3D_OT_add_filament_color, P3D_OT_add_custom_material,
     P3D_OT_reload_palette, P3D_OT_open_user_dir,
     P3D_OT_build_room, P3D_OT_build_cove, P3D_OT_clear_room, P3D_OT_add_furniture,
-    P3D_OT_asset_refresh, P3D_OT_asset_append, P3D_OT_asset_save,
-    P3D_OT_lighting, P3D_OT_camera, P3D_OT_render_setup, P3D_OT_render, P3D_OT_quick_scene,
+    P3D_OT_asset_refresh, P3D_OT_asset_append, P3D_OT_asset_import, P3D_OT_asset_save,
+    P3D_OT_lighting, P3D_OT_camera, P3D_OT_pick_focus, P3D_OT_clear_focus, P3D_OT_cam_nudge, P3D_OT_cam_drive, P3D_OT_render_setup, P3D_OT_render, P3D_OT_quick_scene,
 )
 
 

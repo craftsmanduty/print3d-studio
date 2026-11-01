@@ -53,7 +53,17 @@ def setup(context, s):
     cy.use_denoising = True
     try:
         cy.denoiser = 'OPENIMAGEDENOISE'
-    except TypeError:
+        # albedo + normal guiding keeps layer lines and fine relief that a plain denoise smears
+        cy.denoising_input_passes = 'RGB_ALBEDO_NORMAL'
+        cy.denoising_prefilter = 'ACCURATE'
+        cy.denoising_quality = 'HIGH'
+        cy.denoising_use_gpu = s.use_gpu
+    except (TypeError, AttributeError):
+        pass
+    # 8K maps (photo woods) only cost VRAM at product-shot distances
+    try:
+        cy.texture_limit_render = 'OFF' if s.render_quality == 'ULTRA' else '4096'
+    except (TypeError, AttributeError):
         pass
     cy.max_bounces = 12
     cy.diffuse_bounces = 4
@@ -85,13 +95,17 @@ def setup(context, s):
         vs.view_transform = 'AgX'
     except TypeError:
         pass
-    for look in ('AgX - Medium High Contrast', 'Medium High Contrast', 'AgX - Base Contrast'):
+    looks = ('AgX - Medium High Contrast', 'Medium High Contrast', 'AgX - Base Contrast')
+    if getattr(s, "light_preset", "") == 'CINEMATIC':
+        looks = ('AgX - High Contrast', 'High Contrast') + looks
+    for look in looks:
         try:
             vs.look = look
             break
         except TypeError:
             continue
-    vs.exposure = 0.0
+    # the cinematic sun is strong: exposing for it lets the shadowed room fall off into darkness
+    vs.exposure = -0.4 if getattr(s, "light_preset", "") == 'CINEMATIC' else 0.0
     vs.gamma = 1.0
     setup_units(scene)
     lens_effects(scene, getattr(s, "photo_fx", True))

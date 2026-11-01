@@ -122,7 +122,7 @@ def materials_props():
     s.mat_category = 'Wood'
     s.mat_item = 'walnut'
     bpy.context.scene.cursor.location = (0.3, 1.0, 0.75)
-    run(bpy.ops.p3d.add_furniture, item='spool')
+    run(bpy.ops.p3d.add_furniture, item='mug')
     run(bpy.ops.p3d.apply_surface)
     for iid, *_ in print3d_studio.scene.furniture.ITEMS:
         bpy.context.scene.cursor.location = (3.0, -3.0, 0.0)

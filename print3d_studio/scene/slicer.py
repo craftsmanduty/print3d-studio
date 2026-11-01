@@ -254,7 +254,10 @@ def _rings(loops, band):
                 mid = 0.5 * (lo + hi)
                 ok = clear(ab + ib * mid[:, None]) >= mid * 0.97
                 lo, hi = np.where(ok, mid, lo), np.where(ok, hi, mid)
-            b[bad] = lo
+            # stay short of the wall's midline: on a wall about two bands thick the rings of
+            # both sides would otherwise touch or cross, the infill between them turns inside
+            # out and the cap gets filled over the hole instead of the wall (tube chimney top)
+            b[bad] = lo * 0.92
         ring = _unfold(a + inward * b[:, None], t)
         A, Ar = _area(a), _area(ring)
         if not ((0 < Ar < A) or (Ar < A < 0)):                   # inverted: no band here

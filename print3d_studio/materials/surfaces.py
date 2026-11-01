@@ -4,7 +4,9 @@ Scales are in real-world meters, so objects must be at real size.
 To add a builder, write a function decorated with @builder("name") and use
 "builder": "name" in data/materials.json.
 """
+import json
 import math
+import os
 
 import bpy
 
@@ -29,23 +31,47 @@ class P(dict):
         return float(self.get(k, d))
 
 
-def get(mat_id):
-    """Returns the palette material, building it if needed."""
+def get(mat_id, relief=False):
+    """Returns the palette material, building it if needed. `relief` asks for the variant
+    with true displacement (for materials that have a `displace` depth): it only looks right
+    on objects that get adaptive subdivision, see `add_relief`."""
     spec = palette.material_spec(mat_id)
     if spec is None:
         spec = {"id": mat_id, "name": mat_id, "builder": "plastic", "params": {}}
-    return make("P3D_" + mat_id, spec["builder"], spec.get("params", {}))
+    params = spec.get("params", {})
+    if relief and params.get("displace"):
+        return make("P3D_%s_Relief" % mat_id, spec["builder"], dict(params, relief=True))
+    return make("P3D_" + mat_id, spec["builder"], params)
+
+
+def add_relief(obj):
+    """Adaptive subdivision for an object whose material has true displacement (Cycles
+    dices it to about a pixel per micro face at render time, so the mesh stays light)."""
+    if not any(m is not None and m.get("p3d_relief") for m in obj.data.materials):
+        return
+    mod = obj.modifiers.new("Relief", 'SUBSURF')
+    mod.subdivision_type = 'SIMPLE'
+    mod.use_adaptive_subdivision = True
+    mod.adaptive_pixel_size = 1.5
 
 
 def make(name, builder_name, params, rebuild=False):
+    # rebuild materials saved in a .blend when their palette entry has changed since
+    sig = json.dumps([builder_name, params], sort_keys=True)
     mat = bpy.data.materials.get(name)
-    if mat is not None and not rebuild:
+    if mat is not None and not rebuild and mat.get("p3d_sig") == sig:
         return mat
     mat = utils.node_material(name, mat)
+    mat["p3d_sig"] = sig
     nb = NB(mat.node_tree)
     fn = BUILDERS.get(builder_name, BUILDERS["plastic"])
+    nb.displacement = None
     bsdf = fn(nb, P(params))
-    nb.output(bsdf.outputs[0])
+    out = nb.output(bsdf.outputs[0])
+    if nb.displacement is not None:
+        nb.links.new(nb.displacement, out.inputs['Displacement'])
+    mat.displacement_method = 'BOTH' if nb.displacement is not None else 'BUMP'
+    mat["p3d_relief"] = nb.displacement is not None
     base = params.get("base") or params.get("light") or params.get("c1") or "#CCCCCC"
     mat.diffuse_color = (*utils.hex_to_linear(base), 1.0)
     return mat
@@ -200,6 +226,216 @@ def photo(nb, p):
     return nb.principled(base=col, rough=rough, normal=nrm, spec=0.42,
                          coat=p.f('coat', 0.0), coat_rough=p.f('coat_rough', 0.3), coat_normal=nrm,
                          sheen=0.05)
+
+
+@builder("pbr")
+def pbr(nb, p):
+    """Texture from the local asset library (imported zip) at its real-world size `size` (m).
+    Uses whatever maps the set has: color, normal, roughness or gloss, metal, AO, opacity
+    mask, displacement/bump (as fine bump when there is no normal map). With `displace` (m)
+    the relief variant pushes the low parts (mortar joints) really in."""
+    from .. import library
+    maps = library.texture_maps(p.get('lib', ''))
+    if maps is None:
+        print("3D Print Studio: library texture '%s' not imported, using procedural fallback" % p.get('lib'))
+        return BUILDERS[p.get('fallback', 'plastic')](nb, p)
+
+    mp = nb.new('ShaderNodeMapping')
+    nb.inp(mp, "Vector", nb.tc.outputs['UV'])                  # 1 UV unit = 1 m on our props
+    nb.inp(mp, "Rotation", (0.0, 0.0, math.radians(p.f('rot', 0.0))))
+    sx = 1.0 / p.f('size', 1.0)
+    sy = 1.0 / p.f('size_y', p.f('size', 1.0))                # non-square tiles (plank floors)
+    nb.inp(mp, "Scale", (sx, sy, sx))
+    vec = mp.outputs[0]
+
+    def tex(kind, color=False):
+        n = nb.new('ShaderNodeTexImage', interpolation='Cubic')
+        n.image = bpy.data.images.load(maps[kind], check_existing=True)
+        if not color:
+            n.image.colorspace_settings.name = 'Non-Color'
+        nb.inp(n, "Vector", vec)
+        return n
+
+    col = tex('col', True).outputs['Color']
+    if 'tint' in p:
+        col = nb.mix_col(1.0, col, p.c('tint', '#FFFFFF'), blend='MULTIPLY')
+    if 'ao' in maps and p.f('ao', 0.0) > 0:
+        col = nb.mix_col(p.f('ao', 0.0), col, tex('ao').outputs['Color'], blend='MULTIPLY')
+    kw = {'base': col, 'spec': p.f('spec', 0.5)}
+
+    if 'rough' in maps:
+        r = nb.separate(tex('rough').outputs['Color'])[0]
+    elif 'gloss' in maps:
+        r = nb.sub(1.0, nb.separate(tex('gloss').outputs['Color'])[0])
+    else:
+        r = p.f('rough', 0.5)
+    if 'rough_min' in p or 'rough_max' in p:
+        r = nb.maprange(r, 0.0, 1.0, p.f('rough_min', 0.0), p.f('rough_max', 1.0))
+    kw['rough'] = r
+    if 'metal' in p:
+        kw['metal'] = p.f('metal', 0.0)
+    elif 'metal' in maps:
+        kw['metal'] = nb.separate(tex('metal').outputs['Color'])[0]
+
+    nrm = None
+    if 'nor' in maps:
+        nor_col = tex('nor').outputs['Color']
+        nm = nb.new('ShaderNodeNormalMap')
+        nb.inp(nm, "Strength", p.f('normal', 1.0))
+        nb.inp(nm, "Color", nor_col)
+        nrm = nm.outputs['Normal']
+        if p.f('seam', 0.0) > 0:
+            # board joints are only hairlines in the normal map: where it tilts sharply,
+            # darken the color a little and add roughness so the joints read from a distance
+            r, g, _ = nb.separate(nor_col)
+            tilt = nb.add(nb.math('ABSOLUTE', nb.sub(r, 0.5)), nb.math('ABSOLUTE', nb.sub(g, 0.5)))
+            seam = nb.maprange(tilt, 0.02, 0.12, 0.0, 1.0)
+            kw['base'] = nb.vscale(kw['base'], nb.sub(1.0, nb.mul(seam, p.f('seam', 0.0))))
+            kw['rough'] = nb.add(kw['rough'], nb.mul(seam, 0.3))
+    height = 'disp' if 'disp' in maps else ('bump' if 'bump' in maps else None)
+    if height and p.get('relief'):
+        # true displacement: the top of the height map stays on the surface, the rest sinks in
+        dn = nb.new('ShaderNodeDisplacement')
+        h = nb.separate(tex(height).outputs['Color'])[0]
+        if 'height_range' in p:
+            # many height maps use only a narrow band of grey: stretch it so `displace`
+            # is the real joint depth
+            lo, hi = p['height_range']
+            h = nb.maprange(h, lo, hi, 0.0, 1.0)
+        nb.inp(dn, "Height", h)
+        nb.inp(dn, "Midlevel", 1.0)
+        nb.inp(dn, "Scale", p.f('displace', 0.01))
+        nb.displacement = dn.outputs[0]
+    elif height and (nrm is None or p.f('depth', 0.0) > 0):
+        h = nb.separate(tex(height).outputs['Color'])[0]
+        nrm = nb.bump(h, p.f('depth', 0.001), 1.0, normal=nrm)
+    if nrm is not None:
+        kw['normal'] = nrm
+    if 'mask' in maps and p.get('use_mask', True):
+        kw['alpha'] = nb.separate(tex('mask').outputs['Color'])[0]
+    if p.f('coat', 0.0) > 0:
+        kw.update(coat=p.f('coat', 0.0), coat_rough=p.f('coat_rough', 0.2))
+        if nrm is not None:
+            kw['coat_normal'] = nrm
+    if p.f('sheen', 0.0) > 0:
+        kw['sheen'] = p.f('sheen', 0.0)
+    if p.f('trans', 0.0) > 0:
+        kw['trans'] = p.f('trans', 0.0)
+    return nb.principled(**kw)
+
+
+def _atlas(p):
+    """(maps, sizes from <lib>.json) of a board atlas, or (None, {}) if it is missing."""
+    from .. import library
+    maps = library.texture_maps(p.get('lib', ''))
+    info = {}
+    if maps is not None:
+        try:
+            info = json.load(open(os.path.join(library.find(p['lib']), p['lib'] + ".json")))
+        except (OSError, ValueError, KeyError):
+            pass
+    return maps, info
+
+
+def _boards(nb, p, maps, count, u, v, seed, edge):
+    """Shared end of the board floors: board `u, v` (0..1) shows a random atlas board, at
+    random turned 180 degrees and slightly toned; `edge` = distance to the outline in m."""
+    pick = nb.math('MINIMUM', nb.math('FLOOR', nb.mul(nb.white1d(seed), count)), count - 1)
+    flip = nb.math('GREATER_THAN', nb.white1d(nb.add(seed, 3.7)), 0.5)
+    uf = nb.mix_float(flip, u, nb.sub(1.0, u))
+    vf = nb.mix_float(flip, v, nb.sub(1.0, v))
+    vec = nb.vec(nb.math('DIVIDE', nb.add(pick, uf), count), vf, 0.0)
+
+    def tex(kind, color=False):
+        n = nb.new('ShaderNodeTexImage', interpolation='Linear', extension='EXTEND')
+        n.image = bpy.data.images.load(maps[kind], check_existing=True)
+        if not color:
+            n.image.colorspace_settings.name = 'Non-Color'
+        nb.inp(n, "Vector", vec)
+        return n.outputs['Color']
+
+    groove = nb.maprange(edge, 0.0, p.f('groove_mm', 1.2) * 0.001, 1.0, 0.0, smooth=True)
+    col = tex('col', True)
+    if 'tint' in p:
+        col = nb.mix_col(1.0, col, p.c('tint', '#FFFFFF'), blend='MULTIPLY')
+    tone = nb.maprange(nb.white1d(nb.add(seed, 7.1)), 0.0, 1.0, 0.94, 1.06)
+    col = nb.vscale(col, tone)
+    if 'grout' in p:                                          # tiles: filled joints
+        col = nb.mix_col(groove, col, p.c('grout', '#3A2C22'))
+    else:                                                     # boards: shaded bevel
+        col = nb.vscale(col, nb.sub(1.0, nb.mul(groove, 0.35)))
+    kw = {'base': col, 'spec': 0.5}
+    rough = nb.separate(tex('rough'))[0] if 'rough' in maps else p.f('rough', 0.45)
+    kw['rough'] = nb.add(rough, nb.mul(groove, 0.3))
+    nrm = None
+    if 'nor' in maps:
+        n = tex('nor')
+        r, g, b = nb.separate(n)
+        turned = nb.vec(nb.sub(1.0, r), nb.sub(1.0, g), b)  # board turned 180 degrees
+        nm = nb.new('ShaderNodeNormalMap')
+        nb.inp(nm, "Strength", p.f('normal', 1.0))
+        nb.inp(nm, "Color", nb.mix_col(flip, n, turned))
+        nrm = nm.outputs['Normal']
+    nrm = nb.bump(nb.sub(1.0, groove), 0.0005, 1.0, normal=nrm)
+    kw['normal'] = nrm
+    if p.f('coat', 0.0) > 0:
+        kw.update(coat=p.f('coat', 0.0), coat_rough=p.f('coat_rough', 0.3), coat_normal=nrm)
+    return nb.principled(**kw)
+
+
+def _floor_xy(nb, p):
+    mp = nb.new('ShaderNodeMapping')
+    nb.inp(mp, "Vector", nb.tc.outputs['UV'])                  # 1 UV unit = 1 m on our props
+    nb.inp(mp, "Rotation", (0.0, 0.0, math.radians(p.f('rot', 0.0))))
+    x, y, _ = nb.separate(mp.outputs[0])
+    return x, y
+
+
+@builder("planks")
+def planks(nb, p):
+    """Plank floor laid out like the real thing: boards `board_w` wide and all `board_len`
+    long, each row's end joints shifted by `stagger`. Every board shows a random board from
+    the atlas (whole boards cut from a photo, see tools/make_floor_atlas.py)."""
+    maps, info = _atlas(p)
+    if maps is None:
+        return BUILDERS[p.get('fallback', 'parquet')](nb, p)
+    bw = p.f('board_w', info.get('board_width_m', 0.19))
+    bl = p.f('board_len', info.get('board_length_m', 1.2))
+    x, y = _floor_xy(nb, p)
+    col_i = nb.math('FLOOR', nb.math('DIVIDE', x, bw))
+    u = nb.math('FRACT', nb.math('DIVIDE', x, bw))
+    yy = nb.math('DIVIDE', nb.sub(y, nb.mul(col_i, p.f('stagger', 0.24))), bl)
+    row_j = nb.math('FLOOR', yy)
+    v = nb.math('FRACT', yy)
+    seed = nb.add(nb.mul(col_i, 12.9898), nb.mul(row_j, 78.233))
+    du = nb.mul(nb.math('MINIMUM', u, nb.sub(1.0, u)), bw)
+    dv = nb.mul(nb.math('MINIMUM', v, nb.sub(1.0, v)), bl)
+    return _boards(nb, p, maps, int(info.get('boards', 1)), u, v, seed, nb.math('MINIMUM', du, dv))
+
+
+@builder("chevron")
+def chevron(nb, p):
+    """Chevron floor: bands `band` deep along Y; in each band the boards are parallel and lean
+    sideways by `slant` per unit of band depth, the lean flips every band, so the joints meet
+    in V shapes on the band lines. Boards come from a chevron atlas (tools/make_chevron_atlas.py)."""
+    maps, info = _atlas(p)
+    if maps is None:
+        return BUILDERS[p.get('fallback', 'parquet')](nb, p)
+    band = p.f('band', info.get('band_m', 0.3))
+    pitch = p.f('pitch', info.get('pitch_m', 0.08))
+    slant = p.f('slant', info.get('slant', 0.58))
+    x, y = _floor_xy(nb, p)
+    b = nb.math('FLOOR', nb.math('DIVIDE', y, band))
+    t = nb.math('FRACT', nb.math('DIVIDE', y, band))
+    odd = nb.math('FRACT', nb.mul(b, 0.5))                    # 0 even band, 0.5 odd band
+    tri = nb.mix_float(nb.mul(odd, 2.0), t, nb.sub(1.0, t))   # zig-zag: joints meet on spines
+    xs = nb.sub(x, nb.mul(tri, slant * band))
+    k = nb.math('FLOOR', nb.math('DIVIDE', xs, pitch))
+    u = nb.math('FRACT', nb.math('DIVIDE', xs, pitch))
+    seed = nb.add(nb.mul(k, 12.9898), nb.mul(b, 78.233))
+    du = nb.mul(nb.math('MINIMUM', u, nb.sub(1.0, u)), pitch / math.sqrt(1.0 + slant * slant))
+    dv = nb.mul(nb.math('MINIMUM', t, nb.sub(1.0, t)), band)
+    return _boards(nb, p, maps, int(info.get('boards', 1)), u, t, seed, nb.math('MINIMUM', du, dv))
 
 
 @builder("metal")
@@ -412,13 +648,27 @@ def cutting_mat(nb, p):
     core = inside(z, t * 0.42, t * 0.58)
     col = nb.mix_col(nb.mul(side, core), col, p.c('core', '#B9D3C4'))
 
-    grain = nb.noise(co, 4000.0, detail=2.0).outputs['Fac']
+    # pebbled (orange-peel) skin of the PVC: dense rounded blobs about `pebble_mm` across with
+    # irregular outlines, glossier tops and darker, rougher pits between them
+    size = p.f('pebble_mm', 0.8) * 0.001
+    warp = nb.vsub(nb.noise(co, 0.6 / size, detail=2.0).outputs['Color'], nb.vec(0.5, 0.5, 0.5))
+    pc = nb.vadd(co, nb.vscale(warp, size * 0.9))
+    d1 = nb.voronoi(pc, 1.0 / size, feature='F1', randomness=0.9).outputs['Distance']
+    d2 = nb.voronoi(nb.vadd(pc, nb.vec(0.37, 0.11, 0.0)), 1.6 / size, feature='F1').outputs['Distance']
+    blob = nb.math('MAXIMUM', nb.maprange(d1, 0.05, 0.62, 1.0, 0.0, smooth=True),
+                   nb.mul(nb.maprange(d2, 0.05, 0.55, 1.0, 0.0, smooth=True), 0.7))
+    fine = nb.noise(co, 6.0 / size, detail=2.0).outputs['Fac']
+    peb = nb.mul(nb.add(nb.mul(blob, 0.85), nb.mul(fine, 0.15)), p.f('pebble', 1.0))
+    pit = nb.sub(1.0, blob)
+    col = nb.vscale(col, nb.maprange(pit, 0.4, 1.0, 1.0, 0.8))
+
     peel = nb.noise(co, 350.0, detail=3.0).outputs['Fac']
-    h = nb.sub(nb.add(nb.mul(grain, 0.6), nb.mul(peel, 0.4)), nb.mul(wear, 2.5))
-    rough = nb.add(nb.add(0.66, nb.mul(nb.sub(m2, 0.5), 0.12)), nb.mul(wear, 0.12))
+    h = nb.sub(nb.add(peb, nb.mul(peel, 0.15)), nb.mul(wear, 2.0))
+    rough = nb.add(nb.add(0.62, nb.mul(nb.sub(m2, 0.5), 0.12)), nb.mul(wear, 0.12))
+    rough = nb.add(rough, nb.mul(nb.sub(pit, 0.5), 0.3))
     rough = nb.mix_float(ink, rough, 0.52)
     return nb.principled(base=col, rough=rough, spec=0.3, sheen=0.06, sheen_rough=0.5,
-                         normal=nb.bump(h, 0.00004, 1.0))
+                         normal=nb.bump(h, size * 0.35, 1.0))
 
 
 @builder("pei")

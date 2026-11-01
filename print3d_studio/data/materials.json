@@ -89,25 +89,6 @@
       "source": "Poly Haven (CC0) - plywood"
     },
     {
-      "id": "laminate_photo",
-      "name": "Laminate Floor (Photo)",
-      "category": "Walls & Floors",
-      "builder": "photo",
-      "params": {
-        "tex": "laminate_floor_02",
-        "size": 1.7,
-        "rot": 90.0,
-        "rough_min": 0.3,
-        "rough_max": 0.6,
-        "coat": 0.2,
-        "coat_rough": 0.2,
-        "fallback": "parquet",
-        "light": "#B98A5A",
-        "dark": "#8A5E36"
-      },
-      "source": "Poly Haven (CC0) - laminate_floor_02"
-    },
-    {
       "id": "oak_varnished",
       "name": "Oak (Oiled, Satin)",
       "category": "Wood",
@@ -439,6 +420,7 @@
       "id": "paint_white",
       "name": "White Wall Paint",
       "category": "Walls & Floors",
+      "room": "wall",
       "builder": "paint",
       "params": {
         "base": "#EDEBE6"
@@ -448,6 +430,7 @@
       "id": "paint_warm",
       "name": "Off-White Wall Paint",
       "category": "Walls & Floors",
+      "room": "wall",
       "builder": "paint",
       "params": {
         "base": "#E6DED0"
@@ -457,6 +440,7 @@
       "id": "paint_gray",
       "name": "Gray Wall Paint",
       "category": "Walls & Floors",
+      "room": "wall",
       "builder": "paint",
       "params": {
         "base": "#A7A9A8"
@@ -466,6 +450,7 @@
       "id": "paint_sage",
       "name": "Sage Green Wall Paint",
       "category": "Walls & Floors",
+      "room": "wall",
       "builder": "paint",
       "params": {
         "base": "#9CAF95"
@@ -475,55 +460,210 @@
       "id": "paint_navy",
       "name": "Midnight Blue Wall Paint",
       "category": "Walls & Floors",
+      "room": "wall",
       "builder": "paint",
       "params": {
         "base": "#2F3E55"
       }
     },
     {
+      "id": "paint_forest",
+      "name": "Deep Green Wall Paint",
+      "category": "Walls & Floors",
+      "room": "wall",
+      "builder": "paint",
+      "params": {
+        "base": "#2C4A40"
+      }
+    },
+    {
       "id": "paint_terracotta",
       "name": "Terracotta Wall Paint",
       "category": "Walls & Floors",
+      "room": "wall",
       "builder": "paint",
       "params": {
         "base": "#B86B4B"
       }
     },
     {
-      "id": "parquet_oak",
-      "name": "Oak Parquet",
+      "id": "brick_red_own",
+      "name": "Red Brick Wall",
       "category": "Walls & Floors",
-      "builder": "parquet",
+      "room": "wall",
+      "builder": "pbr",
       "params": {
-        "light": "#C9A26E",
-        "dark": "#9B7140",
-        "rough": 0.45,
-        "coat": 0.25,
-        "coat_rough": 0.2
-      }
+        "lib": "BrickRedOwn",
+        "size": 1.8,
+        "displace": 0.012,
+        "height_range": [
+          0.055,
+          0.682
+        ],
+        "ao": 0.35,
+        "fallback": "brick"
+      },
+      "source": "Own texture: AI generated maps (made by the user), normal X flipped to OpenGL - BrickRedOwn"
+    },
+    {
+      "id": "plaster_brick",
+      "name": "Plastered Brick Wall",
+      "category": "Walls & Floors",
+      "room": "wall",
+      "builder": "pbr",
+      "params": {
+        "lib": "PlasterBrickPattern",
+        "size": 2.0,
+        "displace": 0.0045,
+        "height_range": [
+          0.255,
+          0.605
+        ],
+        "fallback": "paint"
+      },
+      "source": "Poly Haven (CC0) - plaster_brick_pattern, 4K JPG"
+    },
+    {
+      "id": "white_stucco",
+      "name": "White Stucco",
+      "category": "Walls & Floors",
+      "room": "wall",
+      "builder": "pbr",
+      "params": {
+        "lib": "WhiteStucco",
+        "size": 2.0,
+        "displace": 0.0012,
+        "height_range": [
+          0.287,
+          0.452
+        ],
+        "fallback": "paint"
+      },
+      "source": "Poly Haven (CC0) - white_stucco, 4K JPG"
+    },
+    {
+      "id": "white_stucco_coarse",
+      "name": "White Stucco, Coarse",
+      "category": "Walls & Floors",
+      "room": "wall",
+      "builder": "pbr",
+      "params": {
+        "lib": "WhiteStucco02",
+        "size": 1.8,
+        "displace": 0.0045,
+        "height_range": [
+          0.355,
+          0.578
+        ],
+        "fallback": "paint"
+      },
+      "source": "Poly Haven (CC0) - white_stucco_02, 4K JPG"
+    },
+    {
+      "id": "concrete_layers",
+      "name": "Layered Concrete Wall",
+      "category": "Walls & Floors",
+      "room": "wall",
+      "builder": "pbr",
+      "params": {
+        "lib": "ConcreteLayers02",
+        "size": 2.0,
+        "displace": 0.0017,
+        "height_range": [
+          0.751,
+          0.837
+        ],
+        "fallback": "concrete"
+      },
+      "source": "Poly Haven (CC0) - concrete_layers_02, 4K JPG"
+    },
+    {
+      "id": "parquet_oak",
+      "name": "Oak Laminate (Photo)",
+      "category": "Walls & Floors",
+      "room": "floor",
+      "builder": "planks",
+      "params": {
+        "lib": "LaminateOakPhoto",
+        "stagger": 0.24,
+        "groove_mm": 1.2,
+        "normal": 1.0,
+        "coat": 0.08,
+        "coat_rough": 0.35,
+        "fallback": "parquet",
+        "light": "#C9B9A2",
+        "dark": "#9C8A72",
+        "rough": 0.45
+      },
+      "source": "Own photo: boards cut out with tools/make_floor_atlas.py"
     },
     {
       "id": "parquet_walnut",
-      "name": "Walnut Parquet",
+      "name": "Walnut-Stained Laminate (Photo)",
       "category": "Walls & Floors",
-      "builder": "parquet",
+      "room": "floor",
+      "builder": "planks",
       "params": {
-        "light": "#7A5235",
-        "dark": "#432A18",
+        "lib": "LaminateOakPhoto",
+        "stagger": 0.24,
+        "groove_mm": 1.2,
+        "normal": 1.0,
+        "coat": 0.08,
+        "coat_rough": 0.35,
+        "fallback": "parquet",
+        "light": "#C9B9A2",
+        "dark": "#9C8A72",
         "rough": 0.45,
-        "coat": 0.25,
-        "coat_rough": 0.2
-      }
+        "tint": "#8A6A50"
+      },
+      "source": "Own photo: boards cut out with tools/make_floor_atlas.py"
+    },
+    {
+      "id": "chevron_oak",
+      "name": "Oak Chevron Tiles (Photo)",
+      "category": "Walls & Floors",
+      "room": "floor",
+      "builder": "chevron",
+      "params": {
+        "lib": "ChevronOakPhoto",
+        "groove_mm": 1.0,
+        "grout": "#3A2C22",
+        "normal": 1.0,
+        "rough": 0.5,
+        "fallback": "parquet",
+        "light": "#A67B55",
+        "dark": "#7A5434"
+      },
+      "source": "Own photo: boards cut out with tools/make_chevron_atlas.py"
     },
     {
       "id": "concrete_floor",
       "name": "Concrete Floor",
       "category": "Walls & Floors",
+      "room": "floor",
       "builder": "concrete",
       "params": {
         "base": "#8C8A86",
         "rough": 0.6
       }
+    },
+    {
+      "id": "old_wood_floor",
+      "name": "Old Wooden Floor",
+      "category": "Walls & Floors",
+      "room": "floor",
+      "builder": "pbr",
+      "params": {
+        "lib": "OldWoodenFloor02",
+        "size": 2.03,
+        "displace": 0.0035,
+        "height_range": [
+          0.276,
+          0.311
+        ],
+        "fallback": "parquet"
+      },
+      "source": "Poly Haven (CC0) - old_wooden_floor_02, 4K JPG"
     },
     {
       "id": "plastic_white",
@@ -705,6 +845,55 @@
         "rough": 0.85,
         "fiber": 0.9
       }
+    },
+    {
+      "id": "leather_brown_scan",
+      "name": "Brown Leather (Scan)",
+      "category": "Fabric & Leather",
+      "builder": "pbr",
+      "params": {
+        "lib": "BrownLeather",
+        "size": 0.2,
+        "fallback": "leather"
+      },
+      "source": "Poly Haven (CC0) - brown_leather, 4K JPG"
+    },
+    {
+      "id": "leather_fabric",
+      "name": "Leather-Look Fabric",
+      "category": "Fabric & Leather",
+      "builder": "pbr",
+      "params": {
+        "lib": "FabricLeather02",
+        "size": 0.5,
+        "fallback": "leather"
+      },
+      "source": "Poly Haven (CC0) - fabric_leather_02, 4K JPG"
+    },
+    {
+      "id": "hessian",
+      "name": "Hessian (Burlap)",
+      "category": "Fabric & Leather",
+      "builder": "pbr",
+      "params": {
+        "lib": "Hessian230",
+        "size": 0.269,
+        "fallback": "fabric"
+      },
+      "source": "Poly Haven (CC0) - hessian_230, 4K JPG"
+    },
+    {
+      "id": "wool_boucle",
+      "name": "Wool Bouclé",
+      "category": "Fabric & Leather",
+      "builder": "pbr",
+      "params": {
+        "lib": "WoolBoucle",
+        "size": 0.315,
+        "fallback": "fabric",
+        "sheen": 0.3
+      },
+      "source": "Poly Haven (CC0) - wool_boucle, 4K JPG"
     }
   ]
 }
