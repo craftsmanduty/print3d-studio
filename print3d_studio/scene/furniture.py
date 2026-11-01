@@ -8,7 +8,7 @@ import math
 import random
 
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Quaternion, Vector
 
 from .. import utils
 from ..materials import surfaces
@@ -197,19 +197,36 @@ for _iid, _label, _icon, _name, _surface in (
         ("coffee_table_modern", "Modern Coffee Table", 'MESH_CYLINDER', "modern_coffee_table_02", 0.369),
         ("display_shelves", "Display Shelves", 'MENU_PANEL', "wooden_display_shelves_01", None),
         ("chess", "Chess Set", 'MESH_GRID', "chess_set", None),
-        ("stapler", "Vintage Stapler", 'MESH_CUBE', "vintage_stapler", None),
         ("lighter", "Vintage Lighter", 'MESH_CUBE', "vintage_lighter", None),
         ("street_lamp", "Street Lamp (Outdoor)", 'LIGHT', "street_lamp_01", None)):
     item(_iid, _label, _icon)(_library(_name, _surface))
+
+
+@item("stapler", "Vintage Stapler", 'MESH_CUBE')
+def stapler(coll, root, rng):
+    objs = library.append_model("vintage_stapler", coll, root)
+    # the source file shows the staples floating above the open stapler
+    for o in [o for o in objs if "staple_single" in o.name or o.name.endswith("_staples")]:
+        objs.remove(o)
+        bpy.data.objects.remove(o)
+    _ground(objs, root)
+
 
 # hangs on a wall: the back plate is at the root, the arm reaches out along -Y
 item("wall_lantern", "Wall Lantern", 'LIGHT')(_library("street_lamp_02", ground=False))
 
 LAMP_W = 60.0       # W of the spot light in the desk lamp (Blender watts of a ~800 lm bulb)
+# the lamp is held by a C clamp: the root is on the clamp axis; along local +X the throat
+# ends LAMP_THROAT m out (where the desk edge goes) and the top jaw rests on the desk top
+# LAMP_JAW m below the root
+LAMP_THROAT = 0.0095
+LAMP_JAW = 0.005
 
 
-@item("desk_lamp", "Desk Lamp (Arm)", 'LIGHT_SPOT')
+@item("desk_lamp", "Desk Lamp (Clamp)", 'LIGHT_SPOT')
 def desk_lamp(coll, root, rng):
+    """Arm lamp with a C clamp: place the root on a table edge with local +X pointing out of
+    the table (the one-click scene clamps it to the back edge of the desk)."""
     objs = library.append_model("desk_lamp_arm_01", coll, root)
     # the cables are curves hooked to helper empties; once the lamp is moved off the origin
     # they stretch up to the ceiling, so they are left out
@@ -218,15 +235,18 @@ def desk_lamp(coll, root, rng):
         bpy.data.objects.remove(o)
     rig = next((o for o in objs if o.type == 'ARMATURE'), None)
     if rig is not None:
-        # pose: the arm reaches about 30 cm out (along the root's -X/-Y diagonal) and the
-        # shade looks straight down onto the desk
+        # pose: the arm reaches about 40 cm out along the table edge and the shade looks
+        # straight down
         pb = rig.pose.bones
         for n in ("ctrl_top_rotation_A", "ctrl_top_rotation_B"):
             if n in pb:
                 pb[n].rotation_euler = (0.0, 0.0, 0.0)
         if "ctrl_top-position" in pb:
-            pb["ctrl_top-position"].location = (-0.05, 0.15, 0.0)
-    _ground(objs, root)
+            pb["ctrl_top-position"].location = (-0.05, 0.22, 0.0)
+        if "ctrl_lamp_base_pivot" in pb:
+            # swivel the column so the lower arm stays above the clamp (out of the wall behind
+            # the desk) and the head comes forward over the table
+            pb["ctrl_lamp_base_pivot"].rotation_quaternion = Quaternion((0.0, 1.0, 0.0), 0.8)
     head = next((o for o in objs if o.name.startswith("geo_lamp-head") and "button" not in o.name), None)
     if head is None:
         return
@@ -329,11 +349,15 @@ def postcards(coll, root, rng):
     objs = library.append_objects("postcard_set_01", names, coll, root)
     for i, o in enumerate(objs):
         mn, mx = _local_bounds(o)
-        rot = Matrix.Rotation(rng.uniform(-0.6, 0.6), 4, 'Z') @ Matrix.Rotation(-math.pi / 2, 4, 'X')
+        # the card mesh is flat in its own XY plane, picture side up (+Z); only the object in
+        # the source file stands it up, so a turn about Z is all it needs
+        rot = Matrix.Rotation(rng.uniform(-0.6, 0.6), 4, 'Z')
         c = rot @ ((mn + mx) / 2)
         o.matrix_basis = Matrix.Translation(Vector((rng.uniform(-0.04, 0.04) - c.x,
                                                     rng.uniform(-0.03, 0.03) - c.y,
-                                                    0.0004 * (i + 1) - c.z))) @ rot
+                                                    0.0004 * i - c.z))) @ rot
+        card = o.modifiers.new("Card", 'SOLIDIFY')        # 0.3 mm card stock, not a sheet of nothing
+        card.thickness, card.offset = 0.0003, 1.0
 
 
 @item("mug", "Mug", 'MOD_SOLIDIFY')

@@ -193,8 +193,10 @@ def _haze(coll, s):
     me.from_pydata(v, [], f)
     ob = bpy.data.objects.new("P3D_Haze", me)
     coll.objects.link(ob)
-    ob.hide_select = True
-    ob.display_type = 'BOUNDS'
+    # render only: as a viewport object it would catch every ray (drop to surface, surface
+    # snapping, focus picking) on its faces
+    ob.hide_viewport = True
+    ob["p3d_render_only"] = True
     mat = bpy.data.materials.get("P3D_Haze") or bpy.data.materials.new("P3D_Haze")
     mat.use_nodes = True
     nt = mat.node_tree

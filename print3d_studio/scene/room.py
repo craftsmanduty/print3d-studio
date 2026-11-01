@@ -6,21 +6,31 @@ from mathutils import Vector
 
 from .. import utils
 from ..materials import surfaces
-from .mesh import MB
+from .mesh import MB, lines
 
 COLLECTION = "P3D_Room"
 
 
-def _wall(mb, along, fixed, u0, u1, H, T, mat, hole=None):
+# displaced walls and floors are cut into cells no bigger than this, and Cycles may split a
+# cell at most 2^8 times per side (render.py): the finest relief is ~1.6 mm wherever the
+# camera is, instead of one huge face diced to millions of micro faces near the lens
+RELIEF_CELL = 0.4
+
+
+def _wall(mb, along, fixed, u0, u1, H, T, mat, hole=None, cell=None):
     if hole is None:
-        mb.slab(along, fixed, [u0, u1], [0.0, H], T, mat)
+        us, zs = (lines(u0, u1, cell), lines(0.0, H, cell)) if cell else ([u0, u1], [0.0, H])
+        mb.slab(along, fixed, us, zs, T, mat)
         return
     uc, w, sill, h = hole
     a, b = max(uc - w / 2, u0), min(uc + w / 2, u1)
     top = min(sill + h, H)
-    us = sorted({u0, a, b, u1})
-    zs = sorted({0.0, sill, top, H})
-    mb.slab(along, fixed, us, zs, T, mat, empty=[(us.index(a), zs.index(sill))])
+    step = cell or 1e9
+    us = lines(u0, u1, step, keep=(a, b))
+    zs = lines(0.0, H, step, keep=(sill, top))
+    empty = [(i, j) for i in range(len(us) - 1) for j in range(len(zs) - 1)
+             if a <= us[i] < b and sill <= zs[j] < top]
+    mb.slab(along, fixed, us, zs, T, mat, empty=empty)
 
 
 def build_room(context, s):
@@ -30,14 +40,19 @@ def build_room(context, s):
     W, D, H, T = s.room_w, s.room_d, s.room_h, 0.12
     coll["p3d_dims"] = (W, D)
     if len(old) == 2 and (abs(old[0] - W) > 1e-6 or abs(old[1] - D) > 1e-6):
-        from . import carry
-        carry.keep_wall_gaps(context.scene, old, (W, D))
+        from . import carry, decor
+        # room furniture goes back into its slots (or hides if it no longer fits); the rest
+        # keeps its distance to the walls
+        placed = decor.relayout(context.scene, W, D)
+        carry.keep_wall_gaps(context.scene, old, (W, D), skip=placed)
     wall_m = surfaces.get(s.room_wall_mat, relief=True)
     floor_m = surfaces.get(s.room_floor_mat, relief=True)
     trim = surfaces.get('paint_white')
 
     mb = MB()
-    mb.box((W + 2 * T, D + 2 * T, 0.05), (0, 0, -0.025), floor_m)
+    # the walking surface is a fine grid (for the relief); the slab below it stays one box
+    mb.grid(lines(-W / 2 - T, W / 2 + T, RELIEF_CELL), lines(-D / 2 - T, D / 2 + T, RELIEF_CELL), 0.0, floor_m)
+    mb.box((W + 2 * T, D + 2 * T, 0.038), (0, 0, -0.031), trim)     # top below the deepest relief
     floor = mb.to_object("Floor", coll, bevel=0.0)
     surfaces.add_relief(floor)
 
@@ -54,7 +69,7 @@ def build_room(context, s):
     mb = MB()
     for key, (along, fixed, u0, u1, nrm) in walls.items():
         hole = (0.0, ww, sill, wh) if key == win else None
-        _wall(mb, along, fixed, u0, u1, H, T, wall_m, hole)
+        _wall(mb, along, fixed, u0, u1, H, T, wall_m, hole, cell=RELIEF_CELL)
         if s.room_baseboard:
             inner = fixed - nrm.x * (T / 2 + 0.006) if along == 'Y' else fixed - nrm.y * (T / 2 + 0.006)
             _wall(mb, along, inner, u0 + (T if along == 'X' else 0), u1 - (T if along == 'X' else 0),

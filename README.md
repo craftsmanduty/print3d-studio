@@ -32,14 +32,20 @@ To try it during development without installing:
    real layers and given the filament material; a room and desk are built and furnished
    (**Furnish Room and Desk**), the model is set on the mat, and lighting, a product camera and
    Cycles are configured.
-   - On the desk: cutting mat, arm desk lamp, small potted plant, a stack of scanned books, mug,
-     postcards, vintage stapler.
+   - On the desk: cutting mat, arm lamp clamped to the back edge, small potted plant, a stack of
+     scanned books, mug, postcards, vintage stapler.
    - In the room: display shelves dressed with books, a plant and a lighter; a floor plant by
      the window; a green armchair with a chess set on a coffee table.
    - **Room + Desk (Cinematic Sun)** (the default): a low, strong, warm sun through the window,
      little sky light, high-contrast AgX, faint haze that shows the sun beams, and a low, wide
      open product camera so the desk props melt into bokeh. The other presets are Daylight,
-     Golden Hour, Evening (the desk lamp is switched on) and Studio. **Drag on Surfaces** is turned on: while you move the model
+     Golden Hour, Evening (the desk lamp is switched on) and Studio (the furniture is hidden and
+     comes back with the room).
+   - The room furniture adapts to the room size: when you shrink the room, what no longer fits
+     is hidden and returns when there is space again. A piece you moved by hand stays yours and
+     just keeps its distance to the walls.
+   - Things standing on something move with it: decor with the desk, books with the shelves,
+     the chess set with its table. **Drag on Surfaces** is turned on: while you move the model
    (G or the Move tool) it sits on the desk, mat, books or floor under the cursor. The viewport switches to the camera.
 3. **Render > Render Image** (F12).
 
@@ -129,13 +135,26 @@ Every cap face is classified (`p3d_skin` attribute):
   - Maps were converted to JPG (PNG where the alpha is used) at the resolution the object
     needs, about 0.25 mm per pixel: 4K for furniture, 1-2K for small things like books.
   - Book rows, book stacks and postcards take single objects out of the book and postcard sets.
-  - The desk lamp is posed with its own rig so the shade looks down onto the desk; a spot light
-    sits in the shade and is on only in the Evening preset.
+  - The desk lamp is held by its C clamp on the desk edge and posed with its own rig so the
+    shade looks down onto the desk; a spot light sits in the shade and is on only in the
+    Evening preset.
 - **Wall relief:** on the room walls and floor, textures with a height map get true
   displacement (Cycles adaptive subdivision), so mortar joints cast real shadows. Walls are
   built as one connected mesh so the displaced surface has no cracks.
 - **Cutting mat:** matte PVC micro texture, mint grid, ruler ticks along the edges, diagonal
   guide lines, light knife marks and a lighter core layer visible on the edge.
+
+## Memory
+
+The full furnished scene needs about 4 GB at 2048 x 2048 (textures ~1.2 GB, the sliced model,
+relief geometry, render buffers), on top of what Blender itself holds.
+- Displaced walls and floors are cut into 40 cm cells and split at most 2^8 times per side, so
+  a close camera can not dice them into hundreds of millions of micro faces.
+- Grayscale maps (roughness, height, AO, metal) are single-channel JPGs: a quarter of the memory.
+- Persistent Data is off: no second copy of the scene stays in memory after a render.
+- If a final render still runs out: switch the viewport to Solid first (Material Preview keeps
+  every texture in VRAM too) and close other GPU-heavy programs. Rendering the saved file from
+  the command line (`blender -b scene.blend -f 1`) needs the least memory.
 
 ## Local asset library (downloaded textures and models)
 

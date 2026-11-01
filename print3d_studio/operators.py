@@ -8,7 +8,7 @@ from mathutils import Matrix, Vector
 
 from . import library, palette, properties, utils
 from .materials import filament, surfaces
-from .scene import camera, furniture, lighting, render, room
+from .scene import camera, carry, decor, furniture, lighting, render, room
 
 UNIT_SCALE = {'MM': 0.001, 'CM': 0.01, 'IN': 0.0254, 'M': 1.0}
 
@@ -620,6 +620,14 @@ class P3D_OT_quick_scene(bpy.types.Operator):
         if s.surface_snap:
             surface_snap(scene)
 
+        # the model is placed in world space below: let go of whatever it was resting on
+        if obj.parent is not None and carry.MARK in obj:
+            carry.release_all_of(obj)
+        props = bpy.data.collections.get(furniture.COLLECTION)
+        if props is not None:
+            # the room furniture has no place on a studio sweep; it comes back with the room
+            props.hide_viewport = props.hide_render = s.quick_preset == 'STUDIO'
+
         if s.quick_preset == 'STUDIO':
             room.build_cove(context, s)
             _, _, c, _ = utils.world_bounds(obj)
@@ -635,17 +643,20 @@ class P3D_OT_quick_scene(bpy.types.Operator):
             if desk is None:
                 desk = furniture.add("desk", context, location=Vector((0.0, s.room_d / 2 - 0.45, 0.0)))
                 if s.quick_decor:
-                    self._decor(context, desk)
+                    decor.furnish(context, desk)
             top = desk.location + Vector((0, -0.08, furniture.DESK_TOP))
             _, _, c, _ = utils.world_bounds(obj)
             mn = utils.world_bounds(obj)[0]
             obj.location += Vector((top.x - c.x, top.y - c.y, top.z + 0.05 - mn.z))
             drop_to_surface(context, obj)
-            if s.quick_preset == 'DESK_CINEMATIC':
-                # low, close to the desk, wide open: the lamp, plant and books behind melt into bokeh
-                s.cam_elev, s.cam_margin, s.cam_fstop = 10.0, 1.9, 2.8
             s.light_preset = {'DESK_CINEMATIC': 'CINEMATIC', 'DESK_DAY': 'WINDOW_DAY',
                               'DESK_GOLDEN': 'GOLDEN', 'DESK_EVENING': 'EVENING'}[s.quick_preset]
+
+        if s.quick_preset == 'DESK_CINEMATIC':
+            # low, close to the desk, wide open: the lamp, plant and books behind melt into bokeh
+            s.cam_elev, s.cam_margin, s.cam_fstop = 10.0, 1.9, 2.8
+        else:                           # the product shot the other scenes are made for
+            s.cam_elev, s.cam_margin, s.cam_fstop = 20.0, 1.4, 4.0
 
         for o in context.selected_objects:
             o.select_set(False)
@@ -662,79 +673,6 @@ class P3D_OT_quick_scene(bpy.types.Operator):
             if space.shading.type in {'SOLID', 'WIREFRAME'}:
                 space.shading.type = 'MATERIAL'
         return {'FINISHED'}
-
-    @staticmethod
-    def _decor(context, desk):
-        s = context.scene.p3d
-        add = furniture.add
-        base = desk.location + Vector((0, 0, furniture.DESK_TOP))
-        # on the desk, around the mat the model stands on
-        add("cutting_mat", context, location=base + Vector((0.0, -0.08, 0.0)))
-        add("desk_lamp", context, location=base + Vector((-0.52, 0.14, 0.0)), rotation_z=2.36)
-        add("plant", context, location=base + Vector((0.55, 0.2, 0.0)), rotation_z=0.8)
-        add("book_stack_scanned", context, location=base + Vector((0.42, -0.14, 0.0)), rotation_z=0.2, seed=7)
-        add("mug", context, location=base + Vector((0.3, 0.14, 0.0)), rotation_z=2.2, seed=1)
-        add("postcards", context, location=base + Vector((-0.42, -0.2, 0.0)), seed=4)
-        add("stapler", context, location=base + Vector((-0.27, 0.19, 0.0)), rotation_z=0.35)
-
-        # the room around it: what the camera sees behind the desk, out of focus
-        W, D = s.room_w, s.room_d
-        back = D / 2
-        if W / 2 > 0.7 + 0.15 + 1.08 + 0.05:
-            shelves = add("display_shelves", context, location=Vector((0.7 + 0.15 + 0.54, back - 0.2, 0.0)))
-            if shelves is not None:
-                _dress_shelves(context, shelves)
-        if W / 2 > 0.7 + 0.8:
-            add("plant_floor", context, location=Vector((-W / 2 + 0.45, back - 0.4, 0.0)), rotation_z=0.6)
-        if W > 3.2 and D > 3.0:
-            add("chair_green", context, location=Vector((W / 2 - 0.6, -D / 2 + 1.1, 0.0)),
-                rotation_z=-math.pi / 2 - 0.5)
-            table = add("coffee_table", context, location=Vector((W / 2 - 1.45, -D / 2 + 0.95, 0.0)))
-            if table is not None:
-                add("chess", context, location=table.location + Vector((0, 0, table["p3d_surface"])),
-                    rotation_z=0.3)
-
-
-def _shelf_levels(context, root):
-    """(z, free height above) of every board of a shelf unit, bottom to top."""
-    context.view_layer.update()
-    dg = context.evaluated_depsgraph_get()
-    obs = [o for o in root.children_recursive if o.type == 'MESH']
-    pts = [o.matrix_world @ Vector(c) for o in obs for c in o.bound_box]
-    if not pts:
-        return []
-    top = max(p.z for p in pts)
-    c = root.matrix_world.translation
-    origin, levels = Vector((c.x, c.y, top + 0.01)), []
-    for _ in range(40):
-        hit, loc, nrm, _, ob, _ = context.scene.ray_cast(dg, origin, Vector((0, 0, -1)))
-        if not hit or ob is None or ob.name not in {o.name for o in obs}:
-            break
-        if nrm.z > 0.9:
-            levels.append(loc.z)
-        origin = loc - Vector((0, 0, 0.005))
-    levels.sort()
-    return [(z, (levels[i + 1] if i + 1 < len(levels) else top + 0.3) - z) for i, z in enumerate(levels)]
-
-
-def _dress_shelves(context, shelves):
-    """Books, a small plant and a few objects on the boards of the display shelves."""
-    add = furniture.add
-    rz = shelves.rotation_euler.z
-    rot = Matrix.Rotation(rz, 3, 'Z')
-    c = shelves.matrix_world.translation
-    levels = _shelf_levels(context, shelves)
-    col = 0.36                      # the unit has three cubbies side by side
-    # (board from the bottom, cubby -1/0/1, prop, its height)
-    # (board from the bottom, cubby -1/0/1, prop, its height); boards 0 and 1 close the drawers
-    things = [(2, -1, "plant", 0.27), (2, 0, "book_stack_scanned", 0.12), (2, 1, "books_few", 0.24),
-              (3, -1, "lighter", 0.06), (3, 0, "books_few", 0.24),
-              (4, -1, "book_stack_scanned", 0.12), (4, 1, "books_few", 0.24)]
-    for lvl, cub, iid, h in things:
-        if lvl >= len(levels) or levels[lvl][1] < h + 0.02:
-            continue
-        add(iid, context, location=Vector((c.x, c.y, levels[lvl][0])) + rot @ Vector((cub * col, 0.0, 0.0)),
-            rotation_z=rz + (0.4 if iid == "lighter" else 0.0), seed=lvl * 10 + cub)
 
 
 classes = (

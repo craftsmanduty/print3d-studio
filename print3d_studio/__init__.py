@@ -34,6 +34,8 @@ def sync_render_visibility(scene, p3d):
     if p3d is None or not p3d.hide_render_sync or view_layer is None:
         return
     for ob in scene.objects:
+        if "p3d_render_only" in ob:
+            continue
         try:
             hidden = not ob.visible_get(view_layer=view_layer)
         except (RuntimeError, TypeError):

@@ -65,6 +65,14 @@ def setup(context, s):
         cy.texture_limit_render = 'OFF' if s.render_quality == 'ULTRA' else '4096'
     except (TypeError, AttributeError):
         pass
+    # displaced walls / floors (room.py cuts them into 40 cm cells): at most 2^8 splits per
+    # cell side keeps the finest relief at ~1.6 mm, so a close camera can not dice a wall into
+    # hundreds of millions of micro faces; geometry outside the frame is diced 8x coarser
+    try:
+        cy.max_subdivisions = 8
+        cy.offscreen_dicing_scale = 8.0
+    except AttributeError:
+        pass
     cy.max_bounces = 12
     cy.diffuse_bounces = 4
     cy.glossy_bounces = 6
@@ -83,7 +91,8 @@ def setup(context, s):
     scene.render.resolution_x, scene.render.resolution_y = rx, ry
     scene.render.resolution_percentage = pct
     scene.render.film_transparent = False
-    scene.render.use_persistent_data = True
+    # persistent data would keep a second copy of the whole scene in memory after a render
+    scene.render.use_persistent_data = False
     scene.render.image_settings.file_format = 'PNG'
     try:
         scene.render.image_settings.color_depth = '8'

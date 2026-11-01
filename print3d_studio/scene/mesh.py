@@ -10,6 +10,16 @@ def mat4(loc=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1)):
     return Matrix.LocRotScale(Vector(loc), Euler(rot), Vector(scale))
 
 
+def lines(a, b, step, keep=()):
+    """Grid lines from a to b at most `step` apart, plus the lines `keep` (window edges...);
+    a regular line closer than 2 cm to a kept one is dropped."""
+    n = max(1, math.ceil((b - a) / step - 1e-9))
+    keep = [k for k in keep if a <= k <= b]
+    out = [a + (b - a) * i / n for i in range(n + 1)]
+    out = [x for x in out if all(abs(x - k) > 0.02 for k in keep)] + list(keep)
+    return sorted(set(out))
+
+
 class MB:
     def __init__(self):
         self.bm = bmesh.new()
@@ -54,6 +64,14 @@ class MB:
                                    ((i, j - 1), (i, j), (i + 1, j)), ((i, j + 1), (i, j + 1), (i + 1, j + 1))):
                 if (ni, nj) not in full:
                     faces.append(bm.faces.new([vs[a + (-1,)], vs[b + (-1,)], vs[b + (1,)], vs[a + (1,)]]))
+        self._tag(faces=faces, mat=mat)
+
+    def grid(self, xs, ys, z, mat):
+        """A flat, connected grid of quads facing up (a floor that is displaced at render
+        time: small cells keep the adaptive dicing per cell bounded)."""
+        vs = {(i, j): self.bm.verts.new((x, y, z)) for i, x in enumerate(xs) for j, y in enumerate(ys)}
+        faces = [self.bm.faces.new([vs[i, j], vs[i + 1, j], vs[i + 1, j + 1], vs[i, j + 1]])
+                 for i in range(len(xs) - 1) for j in range(len(ys) - 1)]
         self._tag(faces=faces, mat=mat)
 
     def cyl(self, r, depth, loc, mat, r2=None, rot=(0, 0, 0), segs=48, caps=True, pre=None):

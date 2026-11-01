@@ -164,7 +164,7 @@ step(check_drag)
 
 @step
 def drag_books():
-    books = next(o for o in bpy.data.objects if o.get("p3d_item") == "books")
+    books = next(o for o in bpy.data.objects if o.get("p3d_item") == "book_stack_scanned")
     top = max(utils.world_bounds(c)[1].z for c in books.children if c.type == 'MESH')
     drag_to(books.matrix_world.translation + Vector((0, 0, top - books.matrix_world.translation.z)), "books")
 
@@ -351,9 +351,9 @@ CARRY = {}
 def carry_parents():
     desk = item("desk")
     rels = {o.name: o.parent.name if o.parent else None
-            for o in [model()] + [item(i) for i in ("cutting_mat", "books", "mug", "plant", "plant_orchid")]}
+            for o in [model()] + [item(i) for i in ("cutting_mat", "book_stack_scanned", "mug", "plant", "stapler")]}
     print("PARENTS", rels)
-    for i in ("cutting_mat", "books", "mug", "plant", "plant_orchid"):
+    for i in ("cutting_mat", "book_stack_scanned", "mug", "plant", "stapler"):
         if item(i).parent is not desk:
             print("FAIL", i, "is not carried by the desk")
     region = view3d()[2]
@@ -361,7 +361,7 @@ def carry_parents():
     # drag the desk with G over the floor, Face Project snapping on: the desk has to stay
     # on the floor (not climb onto the mat or books it carries) and its load has to follow
     CARRY["before"] = {o.name: o.matrix_world.translation.copy()
-                       for o in [desk, model(), item("books"), item("cutting_mat")]}
+                       for o in [desk, model(), item("book_stack_scanned"), item("cutting_mat")]}
     for o in bpy.context.selected_objects:
         o.select_set(False)
     desk.select_set(True)
